@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html>
+<head>
+<base target="_top">
+<style>
+  :root{--bg:#f6f5f1;--card:#fff;--ink:#1f2933;--mute:#6b7280;--line:#e5e2da;--green:#15803d;--red:#b91c1c;--amber:#b45309;--bar:#86b98f}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px}
+  header{padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  h1{font-size:20px;margin:0}
+  .muted{color:var(--mute);font-size:13px}
+  .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  select,input{font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
+  input.n{width:80px}
+  a.btn,button{font-size:14px;padding:7px 12px;border-radius:6px;background:var(--ink);color:#fff;text-decoration:none;border:0;cursor:pointer}
+  a.btn.light,button.light{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .seg button{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:0}
+  .seg button:first-child{border-radius:6px 0 0 6px}.seg button:last-child{border-radius:0 6px 6px 0}
+  .seg button.on{background:var(--ink);color:#fff}
+  main{padding:0 16px 32px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+  .kpis{grid-column:1/-1;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
+  .kpi .v{font-size:30px;font-weight:800}
+  h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .scroll{overflow-x:auto}
+  table{width:100%;border-collapse:collapse}
+  td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;white-space:nowrap}
+  th{color:var(--mute);font-weight:600;font-size:12px}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .pill{display:inline-block;min-width:34px;text-align:center;border-radius:12px;padding:2px 8px;color:#fff;font-weight:700}
+  .g{background:var(--green)} .r{background:var(--red)} .a{background:var(--amber)}
+  .tag{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--mute)}
+  .barrow{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:14px}
+  .barrow .lab{width:72px;flex:none}
+  .barrow .bar{height:16px;background:var(--bar);border-radius:3px}
+  .wide{grid-column:1/-1}
+  .empty{color:var(--mute);padding:8px 0}
+  .form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
+  .note{font-size:13px;color:var(--mute);margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <div>
+    <h1>Sandrivier picking</h1>
+    <div class="muted" id="upd">Loading...</div>
+  </div>
+  <div class="controls">
+    <label class="muted">Day <input type="date" id="date"></label>
+    <span class="seg"><button id="rk-bags" class="on">Rank by bags</button><button id="rk-hour">Rank by bags per hour</button></span>
+    <a class="btn light" id="sheet" target="_blank" href="#">Open sheet</a>
+    <a class="btn" id="xlsx" target="_blank" href="#">Download Excel</a>
+  </div>
+</header>
+
+<main>
+  <div class="kpis">
+    <div class="card kpi"><div class="muted">Bags</div><div class="v" id="k-total">–</div></div>
+    <div class="card kpi"><div class="muted">Pickers working</div><div class="v" id="k-pick">–</div></div>
+    <div class="card kpi"><div class="muted">Average bags per picker</div><div class="v" id="k-avg">–</div></div>
+    <div class="card kpi"><div class="muted">Typed in by hand</div><div class="v" id="k-man">–</div></div>
+    <div class="card kpi"><div class="muted">Double scans blocked</div><div class="v" id="k-dup">–</div></div>
+  </div>
+
+  <div class="card wide">
+    <h2>End of day check: bags against bins</h2>
+    <div class="scroll" id="recon"></div>
+    <div class="form">
+      <select id="bt"></select>
+      <label class="muted">Plastic bins <input class="n" id="bp" inputmode="numeric"></label>
+      <label class="muted">Wooden bins <input class="n" id="bw" inputmode="numeric"></label>
+      <button id="bsave">Save bins</button>
+      <span class="muted" id="bmsg"></span>
+    </div>
+    <div class="note" id="wnote"></div>
+  </div>
+
+  <div class="card"><h2>Top 10 <span class="muted" id="rk1"></span></h2><div class="scroll" id="top"></div></div>
+  <div class="card"><h2>Bottom 10 <span class="muted" id="rk2"></span></h2><div class="scroll" id="bottom"></div></div>
+  <div class="card"><h2>Suggested pairs (strongest with weakest)</h2><div class="scroll" id="pairs"></div></div>
+  <div class="card"><h2>Last 7 days: top 10 for rewards</h2><div class="scroll" id="week"></div></div>
+  <div class="card"><h2>Bags per block</h2><div id="blocks"></div></div>
+  <div class="card"><h2>Bags per hour of the day</h2><div id="hourly"></div></div>
+  <div class="card wide"><h2>All pickers today</h2><div class="scroll" id="all"></div></div>
+</main>
+
+<script>
+  var state = { date: '', rankBy: 'bags', loaded: false };
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+  function dash(v){ return v==null ? '–' : v; }
+  function load(){ google.script.run.withSuccessHandler(render).withFailureHandler(function(e){ document.getElementById('upd').textContent = 'Error: ' + e.message; }).dashboardData(state.date, state.rankBy); }
+
+  function table(rows, cls, full){
+    if (!rows.length) return '<div class="empty">' + (state.rankBy==='hour' ? 'No picker has scanned for an hour yet.' : 'No bags scanned yet.') + '</div>';
+    var h = '<table><tr><th>#</th><th>Picker</th><th class="n">Bags</th><th class="n">Per hour</th><th>Block</th><th>Team</th>' + (full ? '<th>First</th><th>Last</th><th class="n">Typed</th>' : '') + '</tr>';
+    rows.forEach(function(r,i){
+      h += '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+' <span class="muted">#'+esc(r.no)+'</span> <span class="tag">'+esc(r.type)+'</span></td>'+
+           '<td class="n"><span class="pill '+cls+'">'+r.bags+'</span></td><td class="n">'+dash(r.perHour)+'</td><td>'+esc(r.block)+'</td><td>'+esc(r.team)+'</td>'+
+           (full ? '<td>'+esc(r.first)+'</td><td>'+esc(r.last)+'</td><td class="n">'+(r.manual||'')+'</td>' : '') + '</tr>';
+    });
+    return h + '</table>';
+  }
+  function bars(obj){
+    var keys = Object.keys(obj).sort();
+    if (!keys.length) return '<div class="empty">Nothing yet.</div>';
+    var max = Math.max.apply(null, keys.map(function(k){return obj[k];}));
+    return keys.map(function(k){
+      return '<div class="barrow"><span class="lab">'+esc(k)+'</span><span class="bar" style="width:'+Math.max(2,Math.round(obj[k]/max*65))+'%"></span><span>'+obj[k]+'</span></div>';
+    }).join('');
+  }
+  function reconTable(d){
+    var rows = d.recon.concat(d.recon.length > 1 ? [d.reconTotal] : []);
+    if (!rows.length) return '<div class="empty">No bags or bins for this day yet.</div>';
+    var h = '<table><tr><th>Team</th><th class="n">Bags</th><th class="n">Plastic bins</th><th class="n">Wooden bins</th><th class="n">Kg in bags (est.)</th><th class="n">Kg in bins (est.)</th><th class="n">Bags were on average</th></tr>';
+    rows.forEach(function(r){
+      var pct = r.pct==null ? (r.entered ? '–' : '<span class="muted">enter bins</span>') :
+        (r.pct>115 ? '<span class="pill a">'+r.pct+'%: check weights or bin count</span>' :
+         '<span class="pill '+(r.pct>=90?'g':(r.pct>=75?'a':'r'))+'">'+r.pct+'% full</span>');
+      h += '<tr><td>'+esc(r.team)+'</td><td class="n">'+r.bags+'</td><td class="n">'+(r.entered?r.plastic:'–')+'</td><td class="n">'+(r.entered?r.wooden:'–')+'</td>'+
+           '<td class="n">'+dash(r.kgIn)+'</td><td class="n">'+(r.entered?dash(r.kgOut):'–')+'</td><td class="n">'+pct+'</td></tr>';
+    });
+    return h + '</table>';
+  }
+
+  function render(d){
+    state.date = d.date;
+    document.getElementById('date').value = d.date;
+    document.getElementById('upd').textContent = d.registered + ' bands registered · updated ' + d.updated + ' · refreshes every 30 seconds';
+    document.getElementById('k-total').textContent = d.total;
+    document.getElementById('k-pick').textContent = d.pickers;
+    document.getElementById('k-avg').textContent = d.avg;
+    document.getElementById('k-man').textContent = d.manual;
+    document.getElementById('k-dup').textContent = d.duplicates;
+    document.getElementById('sheet').href = d.sheetUrl;
+    document.getElementById('xlsx').href = d.xlsxUrl;
+    document.getElementById('rk-bags').className = d.rankBy==='bags' ? 'on' : '';
+    document.getElementById('rk-hour').className = d.rankBy==='hour' ? 'on' : '';
+    var lbl = d.rankBy==='hour' ? 'by bags per hour, pickers with at least 1 hour of scans' : 'by bags';
+    document.getElementById('rk1').textContent = lbl;
+    document.getElementById('rk2').textContent = lbl;
+
+    if (!state.loaded) {
+      document.getElementById('bt').innerHTML = d.teams.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('');
+      state.loaded = true;
+    }
+    document.getElementById('recon').innerHTML = reconTable(d);
+    document.getElementById('wnote').textContent = d.weightsSet ?
+      ('Estimates use ' + d.weights.bag + ' kg per full bag, ' + d.weights.plastic + ' kg per plastic bin and ' + d.weights.wooden + ' kg per wooden bin (change these on the Settings tab). A low percentage means bags were not full.') :
+      'Fill in Kg per bag, Kg per plastic bin and Kg per wooden bin on the Settings tab of the sheet to switch this check on.';
+
+    document.getElementById('top').innerHTML = table(d.top, 'g');
+    document.getElementById('bottom').innerHTML = table(d.bottom, 'r');
+    document.getElementById('blocks').innerHTML = bars(d.byBlock);
+    document.getElementById('hourly').innerHTML = bars(d.hourly);
+    document.getElementById('all').innerHTML = table(d.rows, 'g', true);
+
+    document.getElementById('pairs').innerHTML = d.pairs.length ?
+      '<table><tr><th>Strong</th><th class="n">'+(d.rankBy==='hour'?'Per hour':'Bags')+'</th><th>With</th><th class="n">'+(d.rankBy==='hour'?'Per hour':'Bags')+'</th></tr>' +
+      d.pairs.map(function(p){ var k = d.rankBy==='hour' ? 'perHour' : 'bags';
+        return '<tr><td>'+esc(p.strong.name)+'</td><td class="n">'+p.strong[k]+'</td><td>'+esc(p.weak.name)+'</td><td class="n">'+p.weak[k]+'</td></tr>'; }).join('') + '</table>'
+      : '<div class="empty">Needs at least two pickers.</div>';
+
+    document.getElementById('week').innerHTML = d.week.length ?
+      '<table><tr><th>#</th><th>Picker</th><th class="n">Bags</th><th class="n">Days</th></tr>' +
+      d.week.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+' <span class="muted">#'+esc(r.no)+'</span> <span class="tag">'+esc(r.type)+'</span></td><td class="n">'+r.bags+'</td><td class="n">'+r.days+'</td></tr>'; }).join('') + '</table>'
+      : '<div class="empty">No bags in the last 7 days.</div>';
+  }
+
+  document.getElementById('date').addEventListener('change', function(e){ state.date = e.target.value; load(); });
+  document.getElementById('rk-bags').addEventListener('click', function(){ state.rankBy = 'bags'; load(); });
+  document.getElementById('rk-hour').addEventListener('click', function(){ state.rankBy = 'hour'; load(); });
+  document.getElementById('bsave').addEventListener('click', function(){
+    var m = document.getElementById('bmsg'); m.textContent = 'Saving...';
+    google.script.run.withSuccessHandler(function(){ m.textContent = 'Saved.'; document.getElementById('bp').value=''; document.getElementById('bw').value=''; load(); })
+      .withFailureHandler(function(e){ m.textContent = e.message; })
+      .saveBins(state.date, document.getElementById('bt').value, document.getElementById('bp').value, document.getElementById('bw').value);
+  });
+  load();
+  setInterval(load, 30000);
+</script>
+</body>
+</html>

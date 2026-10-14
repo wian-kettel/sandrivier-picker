@@ -1,0 +1,419 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<meta name="theme-color" content="#14532d">
+<title>Sandrivier Pluk</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<style>
+  :root{--bg:#0f172a;--panel:#1e293b;--ink:#f8fafc;--mute:#94a3b8;--line:#334155;--ok:#15803d;--dup:#b45309;--bad:#b91c1c;--info:#1d4ed8}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;height:100%;background:var(--bg);color:var(--ink);font-family:Roboto,-apple-system,Segoe UI,sans-serif}
+  body{display:flex;flex-direction:column}
+  .top{display:flex;align-items:center;gap:8px;padding:10px 12px;background:var(--panel);font-size:15px;flex-wrap:wrap}
+  .top select{font-size:16px;padding:6px;border-radius:6px;border:1px solid var(--line);background:var(--bg);color:var(--ink)}
+  .chip{padding:4px 8px;border-radius:12px;background:var(--bg);color:var(--mute);font-size:13px}
+  .chip.warn{color:#fbbf24}.chip.err{color:#f87171}.chip.good{color:#4ade80}
+  .grow{flex:1}
+  #panel{flex:1;display:flex;flex-direction:column;justify-content:center;align-items:center;text-align:center;padding:16px;transition:background .15s}
+  #panel .l1{font-size:20px;letter-spacing:.06em;opacity:.9}
+  #panel .l2{font-size:40px;font-weight:800;margin:10px 0 0;line-height:1.1}
+  #panel .l3{font-size:96px;font-weight:900;line-height:1;margin:8px 0}
+  #panel .l4{font-size:20px;opacity:.9}
+  .bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding:10px 12px;background:var(--panel)}
+  button{font-size:18px;padding:16px 10px;border:0;border-radius:10px;background:#334155;color:var(--ink);font-weight:600}
+  button.primary{background:var(--ok)}
+  button.big{font-size:26px;padding:22px 36px;margin-top:18px}
+  .ov{position:fixed;inset:0;background:rgba(2,6,23,.92);display:none;flex-direction:column;padding:20px;overflow:auto;z-index:5}
+  .ov.on{display:flex}
+  .ov h2{margin:0 0 12px;font-size:22px}
+  .ov label{display:block;margin:12px 0 4px;color:var(--mute);font-size:15px}
+  .ov input,.ov select{width:100%;font-size:20px;padding:12px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink)}
+  .row{display:flex;gap:8px;margin-top:16px}.row button{flex:1}
+  .keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+  .keys button{font-size:30px;padding:18px 0}
+  #kpdisp{font-size:48px;font-weight:800;text-align:center;min-height:60px;margin:8px 0}
+  .msg{margin-top:12px;color:#fbbf24;min-height:22px}
+  table{width:100%;border-collapse:collapse;font-size:17px}
+  td,th{padding:8px 4px;border-bottom:1px solid var(--line);text-align:left}
+  td.n,th.n{text-align:right}
+  .small{font-size:13px;color:var(--mute)}
+</style>
+</head>
+<body>
+
+<div class="top">
+  <span class="chip" id="team">Team ?</span>
+  <select id="block"></select>
+  <span class="grow"></span>
+  <span class="chip" id="sync">…</span>
+  <span class="chip" id="batt"></span>
+</div>
+
+<div id="panel">
+  <div class="l1" id="p1">SANDRIVIER PLUK</div>
+  <div class="l2" id="p2">Press START</div>
+  <div class="l3" id="p3"></div>
+  <div class="l4" id="p4">The screen stays on while scanning.</div>
+  <button class="big primary" id="start">START</button>
+</div>
+
+<div class="bar">
+  <button id="bManual">Type number</button>
+  <button id="bToday">Today</button>
+  <button id="bMenu">Menu</button>
+</div>
+
+<!-- setup -->
+<div class="ov" id="ovSetup">
+  <h2>Phone setup</h2>
+  <label>Google web app link (ends in /exec)</label><input id="sUrl" autocomplete="off">
+  <label>Farm PIN</label><input id="sPin" inputmode="numeric" autocomplete="off">
+  <label>Team</label><select id="sTeam"><option>Team 1</option><option>Team 2</option></select>
+  <label>Phone name</label><input id="sDev" placeholder="e.g. FORT 1 A">
+  <div class="msg" id="sMsg"></div>
+  <div class="row"><button id="sCancel">Cancel</button><button class="primary" id="sSave">Save</button></div>
+</div>
+
+<!-- manual number -->
+<div class="ov" id="ovKey">
+  <h2>Type the picker number</h2>
+  <div id="kpdisp"></div>
+  <div class="keys" id="keys"></div>
+  <div class="row"><button id="kCancel">Cancel</button><button class="primary" id="kOk">Count bag</button></div>
+</div>
+
+<!-- register -->
+<div class="ov" id="ovReg">
+  <h2>New band</h2>
+  <div class="small" id="rUid"></div>
+  <label>Picker number</label><input id="rNo" inputmode="numeric">
+  <label>Name and surname</label><input id="rName">
+  <label>Paid as</label><select id="rType"><option>Day</option><option>Contract</option></select>
+  <div class="msg" id="rMsg"></div>
+  <div class="row"><button id="rCancel">Cancel</button><button class="primary" id="rSave">Register</button></div>
+</div>
+
+<!-- today -->
+<div class="ov" id="ovToday">
+  <h2>Today on this phone</h2>
+  <div id="tBody"></div>
+  <div class="row"><button class="primary" id="tClose">Close</button></div>
+</div>
+
+<!-- menu -->
+<div class="ov" id="ovMenu">
+  <h2>Menu</h2>
+  <div class="small" id="mInfo"></div>
+  <div class="row"><button id="mRoster">Refresh picker list</button></div>
+  <div class="row"><button id="mSync">Send scans now</button></div>
+  <div class="row"><button id="mSetup">Phone setup</button></div>
+  <div class="row"><button class="primary" id="mClose">Close</button></div>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  // ---------- storage ----------
+  function get(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } }
+  function put(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
+  function pad(n){ return (n<10?'0':'')+n; }
+  function today(){ var d = new Date(); return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+  function hhmm(t){ var d = new Date(t); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+  function uuid(){ return (crypto.randomUUID ? crypto.randomUUID() : (Date.now().toString(36)+Math.random().toString(36).slice(2))); }
+  function normUid(s){ var h = String(s||'').toUpperCase().replace(/[^0-9A-F]/g,''); return h.length<4 ? '' : h.match(/.{1,2}/g).join(':'); }
+  var $ = function(id){ return document.getElementById(id); };
+
+  var cfg = get('cfg', null);
+  var roster = get('roster', { pickers: [], blocks: [], repeatMinutes: 2 });
+  var queue = get('queue', []);
+  var lastRead = { uid: '', t: 0 };
+  var scanning = false, regUid = '', kp = '', wakeLock = null, audio = null;
+
+  function logKey(){ return 'log-' + today(); }
+  function getLog(){ return get(logKey(), []); }
+  function cleanupOldLogs(){
+    try { for (var i = localStorage.length - 1; i >= 0; i--) { var k = localStorage.key(i);
+      if (k && k.indexOf('log-') === 0 && k !== logKey()) {
+        var d = new Date(k.slice(4)); if (Date.now() - d.getTime() > 14*86400000) localStorage.removeItem(k); } } } catch(e){}
+  }
+
+  // ---------- feedback ----------
+  function tone(freq, ms, when){
+    if (!audio) return;
+    var o = audio.createOscillator(), g = audio.createGain();
+    o.frequency.value = freq; o.type = 'square'; g.gain.value = 0.25;
+    o.connect(g); g.connect(audio.destination);
+    var t0 = audio.currentTime + (when||0); o.start(t0); o.stop(t0 + ms/1000);
+  }
+  function feedback(kind){
+    if (kind === 'ok') { tone(1500, 120); if (navigator.vibrate) navigator.vibrate(120); }
+    else if (kind === 'dup') { tone(500, 150); tone(500, 150, 0.25); if (navigator.vibrate) navigator.vibrate([150,100,150]); }
+    else { tone(250, 600); if (navigator.vibrate) navigator.vibrate(600); }
+  }
+  var panelTimer = null;
+  function show(color, l1, l2, l3, l4, keepMs){
+    $('panel').style.background = color || '';
+    $('p1').textContent = l1 || ''; $('p2').textContent = l2 || ''; $('p3').textContent = l3 == null ? '' : l3; $('p4').textContent = l4 || '';
+    clearTimeout(panelTimer);
+    if (keepMs) panelTimer = setTimeout(idle, keepMs);
+  }
+  function idle(){
+    if (!cfg) return show('', 'SANDRIVIER PLUK', 'Set up this phone', '', 'Open Menu, then Phone setup.');
+    if (!scanning) return show('', 'SANDRIVIER PLUK', 'Press START', '', 'The screen stays on while scanning.');
+    var n = getLog().filter(function(s){ return s.status === 'OK'; }).length;
+    show('', 'READY', 'Tap a band', '', n + ' bags on this phone today');
+  }
+
+  // ---------- picker lookup ----------
+  function byUid(uid){ for (var i=0;i<roster.pickers.length;i++){ var p=roster.pickers[i]; if (p.active && p.uid===uid) return p; } return null; }
+  function byNo(no){ for (var i=0;i<roster.pickers.length;i++){ var p=roster.pickers[i]; if (p.active && String(p.no)===String(no)) return p; } return null; }
+
+  // ---------- counting ----------
+  function count(p, method){
+    var now = Date.now();
+    var log = getLog();
+    var lastOk = 0, n = 0;
+    log.forEach(function(s){ if (s.uid === p.uid && s.status === 'OK') { n++; if (s.t > lastOk) lastOk = s.t; } });
+    var windowMs = (roster.repeatMinutes || 2) * 60000;
+    var status = (lastOk && now - lastOk < windowMs) ? 'DUPLICATE' : 'OK';
+    var scan = { id: uuid(), uid: p.uid, no: p.no, name: p.name, block: $('block').value, t: now, method: method, status: status };
+    log.push(scan); put(logKey(), log);
+    queue.push({ id: scan.id, uid: scan.uid, no: scan.no, block: scan.block, t: scan.t, method: scan.method, status: scan.status });
+    put('queue', queue);
+    if (status === 'OK') {
+      n++;
+      feedback('ok');
+      show('var(--ok)', 'BAG COUNTED' + (method==='MANUAL' ? ' (typed)' : ''), p.name + '  #' + p.no, n, 'bags today', 2500);
+    } else {
+      feedback('dup');
+      var wait = Math.ceil((windowMs - (now - lastOk)) / 1000);
+      show('var(--dup)', 'NOT COUNTED', p.name + '  #' + p.no, '', 'Already counted ' + Math.round((now-lastOk)/1000) + ' s ago. Wait ' + wait + ' s.', 3500);
+    }
+    updateSync();
+    setTimeout(sync, 500);
+  }
+
+  function onBand(serial){
+    var uid = normUid(serial);
+    if (!uid) return;
+    var now = Date.now();
+    if (uid === lastRead.uid && now - lastRead.t < 3000) return;   // same band still against the phone
+    lastRead = { uid: uid, t: now };
+    if ($('ovReg').classList.contains('on')) return;
+    var p = byUid(uid);
+    if (p) return count(p, 'NFC');
+    feedback('bad');
+    regUid = uid;
+    show('var(--info)', 'UNKNOWN BAND', 'Not registered', '', 'Band ' + uid, 0);
+    openReg(uid);
+  }
+
+  // ---------- NFC ----------
+  function startNfc(){
+    if (audio === null) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch(e){ audio = false; } }
+    if (audio && audio.resume) audio.resume();
+    keepAwake();
+    if (!('NDEFReader' in window)) {
+      scanning = false;
+      $('start').style.display = 'none';
+      return show('var(--bad)', 'NO NFC IN THIS BROWSER', 'Use Chrome on the Android phone', '', 'You can still use Type number.', 0);
+    }
+    try {
+      var reader = new NDEFReader();
+      reader.scan().then(function(){
+        scanning = true;
+        $('start').style.display = 'none';
+        idle();
+      }).catch(function(err){
+        show('var(--bad)', 'NFC NOT STARTED', err.name || 'Error', '', (err.message || '') + ' Turn on NFC in Android settings and press START.', 0);
+      });
+      reader.onreading = function(ev){ onBand(ev.serialNumber); };
+      reader.onreadingerror = function(){ feedback('bad'); show('var(--bad)', 'COULD NOT READ BAND', 'Hold it still and try again', '', '', 2500); };
+    } catch (err) {
+      show('var(--bad)', 'NFC ERROR', err.name || 'Error', '', err.message || '', 0);
+    }
+  }
+  function keepAwake(){
+    if (!('wakeLock' in navigator)) return;
+    navigator.wakeLock.request('screen').then(function(l){ wakeLock = l; }).catch(function(){});
+  }
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'visible') { if (scanning) keepAwake(); refreshBattery(); }
+  });
+
+  // ---------- server ----------
+  function sendJson(body){
+    return fetch(cfg.url, { method: 'POST', body: JSON.stringify(body) }).then(function(r){ return r.json(); });
+  }
+  var syncing = false;
+  function sync(){
+    if (!cfg || syncing || !queue.length || !navigator.onLine) { updateSync(); return; }
+    syncing = true; updateSync();
+    var batch = queue.slice(0, 200);
+    sendJson({ action: 'scans', pin: cfg.pin, device: cfg.device, team: cfg.team, scans: batch }).then(function(res){
+      syncing = false;
+      if (!res.ok) { syncErr = res.error || 'Send failed'; return updateSync(); }
+      syncErr = '';
+      var done = {}; (res.accepted || []).forEach(function(id){ done[id] = true; });
+      queue = get('queue', []).filter(function(s){ return !done[s.id]; });
+      put('queue', queue);
+      put('lastSync', Date.now());
+      updateSync();
+      if (queue.length) setTimeout(sync, 1000);
+    }).catch(function(){ syncing = false; syncErr = ''; updateSync(); });
+  }
+  var syncErr = '';
+  function updateSync(){
+    var el = $('sync');
+    if (syncErr) { el.className = 'chip err'; el.textContent = syncErr; return; }
+    if (!queue.length) { el.className = 'chip good'; el.textContent = 'All sent'; return; }
+    el.className = 'chip warn';
+    el.textContent = queue.length + ' waiting' + (navigator.onLine ? (syncing ? ', sending' : '') : ', no signal');
+  }
+  function loadRoster(quiet){
+    if (!cfg) return Promise.resolve(false);
+    var url = cfg.url + (cfg.url.indexOf('?') < 0 ? '?' : '&') + 'api=roster&pin=' + encodeURIComponent(cfg.pin);
+    return fetch(url).then(function(r){ return r.json(); }).then(function(res){
+      if (!res.ok) throw new Error(res.error || 'Could not load pickers');
+      roster = { pickers: res.pickers, blocks: res.blocks, repeatMinutes: res.repeatMinutes, currentBlock: res.currentBlock, fetched: Date.now() };
+      put('roster', roster); fillBlocks();
+      if (!quiet) show('var(--info)', 'PICKER LIST UPDATED', roster.pickers.length + ' bands', '', '', 2000);
+      return true;
+    }).catch(function(err){
+      if (!quiet) show('var(--bad)', 'COULD NOT LOAD PICKERS', err.message, '', 'Check signal, link and PIN.', 3500);
+      return false;
+    });
+  }
+  function fillBlocks(){
+    var cur = get('block', '') || roster.currentBlock || '';
+    var blocks = roster.blocks && roster.blocks.length ? roster.blocks : ['Blok 1'];
+    $('block').innerHTML = blocks.map(function(b){ return '<option' + (b===cur?' selected':'') + '>' + b.replace(/</g,'') + '</option>'; }).join('');
+  }
+  $('block').addEventListener('change', function(e){ put('block', e.target.value); });
+
+  // ---------- battery ----------
+  function refreshBattery(){
+    if (!navigator.getBattery) return;
+    navigator.getBattery().then(function(b){
+      var bl = get('batlog', []), now = Date.now(), lvl = Math.round(b.level*100);
+      if (b.charging) { if (bl.length) put('batlog', []); }
+      else if (!bl.length || now - bl[bl.length-1].t >= 15*60000) { bl.push({ t: now, lvl: lvl }); put('batlog', bl.slice(-80)); }
+      $('batt').textContent = Math.round(b.level*100) + '%' + (b.charging ? ' charging' : '');
+      $('batt').className = 'chip' + (b.level < 0.2 && !b.charging ? ' err' : '');
+    });
+  }
+
+  // ---------- overlays ----------
+  function open(id){ $(id).classList.add('on'); }
+  function close(id){ $(id).classList.remove('on'); }
+
+  function openSetup(){
+    $('sUrl').value = cfg ? cfg.url : ''; $('sPin').value = cfg ? cfg.pin : '';
+    $('sTeam').value = cfg ? cfg.team : 'Team 1'; $('sDev').value = cfg ? cfg.device : '';
+    $('sMsg').textContent = ''; open('ovSetup');
+  }
+  $('sCancel').onclick = function(){ close('ovSetup'); };
+  $('sSave').onclick = function(){
+    var url = $('sUrl').value.trim();
+    if (!/^https:\/\/script\.google\.com\/.+\/exec$/.test(url)) { $('sMsg').textContent = 'The link must start with https://script.google.com and end in /exec'; return; }
+    if (!$('sPin').value.trim()) { $('sMsg').textContent = 'Enter the farm PIN.'; return; }
+    cfg = { url: url, pin: $('sPin').value.trim(), team: $('sTeam').value, device: $('sDev').value.trim() || 'phone' };
+    put('cfg', cfg); applyCfg();
+    $('sMsg').textContent = 'Checking...';
+    loadRoster(true).then(function(ok){
+      if (ok) { close('ovSetup'); show('var(--ok)', 'PHONE READY', roster.pickers.length + ' bands loaded', '', '', 2500); }
+      else $('sMsg').textContent = 'Saved, but the picker list did not load. Check the link, the PIN and signal.';
+    });
+  };
+  function applyCfg(){ $('team').textContent = cfg ? cfg.team : 'Not set up'; }
+
+  // manual keypad
+  (function(){
+    var k = ['1','2','3','4','5','6','7','8','9','⌫','0','C'];
+    $('keys').innerHTML = k.map(function(x){ return '<button data-k="'+x+'">'+x+'</button>'; }).join('');
+    $('keys').addEventListener('click', function(e){
+      var x = e.target.getAttribute('data-k'); if (!x) return;
+      if (x === '⌫') kp = kp.slice(0, -1); else if (x === 'C') kp = ''; else if (kp.length < 5) kp += x;
+      $('kpdisp').textContent = kp;
+    });
+  })();
+  $('bManual').onclick = function(){ if (!cfg) return openSetup(); kp = ''; $('kpdisp').textContent = ''; open('ovKey'); };
+  $('kCancel').onclick = function(){ close('ovKey'); };
+  $('kOk').onclick = function(){
+    var p = byNo(kp); close('ovKey');
+    if (!p) { feedback('bad'); return show('var(--bad)', 'NO PICKER', 'Number ' + (kp || '?') + ' is not registered', '', 'Refresh the picker list in Menu if this is a new picker.', 3500); }
+    count(p, 'MANUAL');
+  };
+
+  // register
+  function openReg(uid){
+    $('rUid').textContent = 'Band ' + uid; $('rNo').value = ''; $('rName').value = ''; $('rType').value = 'Day'; $('rMsg').textContent = '';
+    open('ovReg');
+  }
+  $('rCancel').onclick = function(){ close('ovReg'); idle(); };
+  $('rSave').onclick = function(){
+    if (!navigator.onLine) { $('rMsg').textContent = 'Registering needs signal. Try again where there is signal.'; return; }
+    $('rMsg').textContent = 'Saving...'; $('rSave').disabled = true;
+    sendJson({ action: 'register', pin: cfg.pin, uid: regUid, no: $('rNo').value.trim(), name: $('rName').value.trim(), type: $('rType').value })
+      .then(function(res){
+        $('rSave').disabled = false;
+        if (!res.ok) { $('rMsg').textContent = res.error || 'Could not register'; return; }
+        roster.pickers.push(res.picker); put('roster', roster);
+        close('ovReg'); feedback('ok');
+        show('var(--ok)', 'BAND LINKED', res.picker.name + '  #' + res.picker.no, '', 'Tap again to count a bag.', 3000);
+      }).catch(function(){ $('rSave').disabled = false; $('rMsg').textContent = 'No reply from the sheet. Check signal and try again.'; });
+  };
+
+  // today
+  $('bToday').onclick = function(){
+    var per = {};
+    getLog().forEach(function(s){
+      var r = per[s.uid] || (per[s.uid] = { name: s.name, no: s.no, ok: 0, dup: 0, last: 0 });
+      if (s.status === 'OK') { r.ok++; if (s.t > r.last) r.last = s.t; } else r.dup++;
+    });
+    var rows = Object.keys(per).map(function(k){ return per[k]; }).sort(function(a,b){ return b.ok - a.ok; });
+    var total = rows.reduce(function(a,r){ return a + r.ok; }, 0);
+    $('tBody').innerHTML = rows.length ?
+      '<div class="small">' + total + ' bags, ' + rows.length + ' pickers</div><table><tr><th>Picker</th><th class="n">Bags</th><th class="n">Last</th></tr>' +
+      rows.map(function(r){ return '<tr><td>' + String(r.name).replace(/</g,'') + ' <span class="small">#' + r.no + '</span></td><td class="n">' + r.ok + '</td><td class="n">' + (r.last ? hhmm(r.last) : '') + '</td></tr>'; }).join('') + '</table>'
+      : '<div class="small">No scans yet today.</div>';
+    open('ovToday');
+  };
+  $('tClose').onclick = function(){ close('ovToday'); };
+
+  // menu
+  $('bMenu').onclick = function(){
+    var ls = get('lastSync', 0);
+    var bl = get('batlog', []), bt = 'Battery: not enough readings yet (needs 30 minutes off the charger).';
+    if (bl.length > 2) {
+      var hrs = (bl[bl.length-1].t - bl[0].t) / 3600000, used = bl[0].lvl - bl[bl.length-1].lvl;
+      if (hrs >= 0.5 && used > 0) bt = 'Battery: ' + bl[0].lvl + '% at ' + hhmm(bl[0].t) + ', now ' + bl[bl.length-1].lvl + '%. About ' + (used/hrs).toFixed(1) +
+        '% per hour, so a full charge lasts about ' + Math.round(100/(used/hrs)) + ' hours.';
+    }
+    $('mInfo').innerHTML = ((cfg ? cfg.team + ' · ' + cfg.device : 'Not set up') + ' · ' + roster.pickers.length + ' bands · ' +
+      queue.length + ' scans waiting · last sent ' + (ls ? hhmm(ls) : 'never')).replace(/</g,'') + '<br><br>' + bt;
+    open('ovMenu');
+  };
+  $('mClose').onclick = function(){ close('ovMenu'); };
+  $('mRoster').onclick = function(){ close('ovMenu'); loadRoster(false); };
+  $('mSync').onclick = function(){ close('ovMenu'); syncErr = ''; sync(); };
+  $('mSetup').onclick = function(){ close('ovMenu'); openSetup(); };
+
+  $('start').onclick = function(){ if (!cfg) return openSetup(); startNfc(); };
+
+  // ---------- start ----------
+  window.addEventListener('online', function(){ updateSync(); sync(); });
+  window.addEventListener('offline', updateSync);
+  if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
+  cleanupOldLogs(); applyCfg(); fillBlocks(); updateSync(); refreshBattery(); idle();
+  setInterval(sync, 15000);
+  setInterval(refreshBattery, 60000);
+  setInterval(function(){ if (navigator.onLine) loadRoster(true); }, 10 * 60000);
+  if (cfg) loadRoster(true);
+})();
+</script>
+</body>
+</html>

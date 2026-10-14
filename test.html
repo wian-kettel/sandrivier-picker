@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Phone test</title>
+<style>
+  body{margin:0;background:#0f172a;color:#f8fafc;font-family:Roboto,-apple-system,sans-serif;padding:16px}
+  h1{font-size:22px;margin:0 0 4px}
+  .card{background:#1e293b;border-radius:10px;padding:14px;margin:12px 0}
+  button{font-size:20px;padding:14px 20px;border:0;border-radius:10px;background:#15803d;color:#fff;font-weight:700;width:100%}
+  button.grey{background:#334155}
+  .res{font-size:18px;margin-top:10px;line-height:1.5}
+  .pass{color:#4ade80;font-weight:700}.fail{color:#f87171;font-weight:700}
+  table{width:100%;border-collapse:collapse;font-size:15px;margin-top:8px}
+  td,th{padding:4px;border-bottom:1px solid #334155;text-align:left}
+  .small{font-size:13px;color:#94a3b8}
+</style>
+</head>
+<body>
+<h1>FORT 1 phone test</h1>
+<div class="small">Use Chrome on the phone. Nothing on this page is sent anywhere.</div>
+
+<div class="card">
+  <b>1. NFC test</b>
+  <div class="small">Press the button, allow NFC, then tap a band on the back of the phone 10 times in a row.</div>
+  <p><button id="nfc">Start NFC test</button></p>
+  <div class="res" id="nfcRes">Not started.</div>
+</div>
+
+<div class="card">
+  <b>2. Full-day battery test</b>
+  <div class="small">Done on the real scanning screen, not here: charge to 100%, open the scanning screen, press START and leave it on all day. Menu shows the battery use per hour.</div>
+</div>
+
+<script>
+(function(){
+  var $ = function(id){ return document.getElementById(id); };
+  function pad(n){ return (n<10?'0':'')+n; }
+  function hhmm(t){ var d = new Date(t); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+  function get(k,d){ try{ var v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){ return d; } }
+  function put(k,v){ try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){} }
+  var wake = null;
+  function keepAwake(){ if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(function(l){ wake=l; }).catch(function(){}); }
+  document.addEventListener('visibilitychange', function(){ if (document.visibilityState==='visible' && nfcOn) keepAwake(); });
+
+  // NFC
+  var nfcOn = false, reads = [], last = 0;
+  $('nfc').onclick = function(){
+    if (!('NDEFReader' in window)) {
+      $('nfcRes').innerHTML = '<span class="fail">FAIL:</span> this browser has no Web NFC. Make sure you are in Chrome (not the Blackview browser) and Chrome is up to date.';
+      return;
+    }
+    var r = new NDEFReader();
+    r.scan().then(function(){
+      nfcOn = true; keepAwake();
+      $('nfcRes').innerHTML = 'Scanning. Tap a band now.';
+    }).catch(function(e){
+      $('nfcRes').innerHTML = '<span class="fail">FAIL:</span> ' + (e.name||'') + ' ' + (e.message||'') + '<br>Check NFC is switched on in Android settings.';
+    });
+    r.onreading = function(ev){
+      var now = Date.now();
+      reads.push({ t: now, sn: ev.serialNumber, gap: last ? now - last : null }); last = now;
+      if (navigator.vibrate) navigator.vibrate(100);
+      var ok = reads.length >= 10;
+      var gaps = reads.filter(function(x){ return x.gap; }).map(function(x){ return x.gap; });
+      var avg = gaps.length ? (gaps.reduce(function(a,b){return a+b;},0)/gaps.length/1000).toFixed(1) : '–';
+      $('nfcRes').innerHTML = (ok ? '<span class="pass">PASS:</span> ' : '') + reads.length + ' reads. Band: <b>' + ev.serialNumber + '</b><br>Average time between taps: ' + avg + ' s';
+    };
+    r.onreadingerror = function(){ $('nfcRes').innerHTML += '<br><span class="fail">One read failed</span> (count how often this happens).'; };
+  };
+
+})();
+</script>
+</body>
+</html>
