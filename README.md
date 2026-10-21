@@ -31,6 +31,11 @@ farm's private Google Sheet. The farm PIN keeps anyone else from sending scans.
 - Estimates use `Bags per bin` (44) and `Expected export %` until Fanus has entered actual bins; after that they learn
   from the last 7 entered days. Target: `Export bin target` (72). Breaks: `Picking sessions`.
 
+## Keeping the dashboard instant
+Run `installWarmer` once. Every minute during picking hours Google recalculates today's dashboard in the background
+(only when new scans arrived, otherwise every 5 minutes), so opening the dashboard never waits for the sheet.
+`removeWarmer` switches it off.
+
 ## Load test
 Run `loadTest` in the Apps Script editor: about 7,500 scans for 50 demo pickers, sent like two phones would.
 Timings land on the "Load test" tab. Run `clearDemo` afterwards.

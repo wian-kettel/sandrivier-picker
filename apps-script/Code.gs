@@ -485,20 +485,54 @@ function calibration_(beforeDate, actuals) {
   };
 }
 
-function dashboardData(dateStr, rankBy) {
-  const key = 'dash:' + (dateStr || '') + ':' + (rankBy || '');
+// The dashboard is served from a cache that warmDashboard() refreshes every minute in the background,
+// so nobody waits for the sheet to be read. Both rankings are in one result; the page picks one.
+function dashboardData(dateStr) {
+  const today = day_(new Date());
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(dateStr || '') ? dateStr : today;
   const cache = CacheService.getScriptCache();
-  const hit = cache.get(key);
+  const hit = cache.get('dash:' + date);
   if (hit) return JSON.parse(hit);
-  const out = dashboardData_(dateStr, rankBy);
-  try { cache.put(key, JSON.stringify(out), out.isToday ? 45 : 300); } catch (e) {}
+  return storeDash_(dashboardData_(date));
+}
+function storeDash_(out) {
+  try { CacheService.getScriptCache().put('dash:' + out.date, JSON.stringify(out), out.isToday ? 150 : 600); } catch (e) {}
   return out;
 }
-function dashboardData_(dateStr, rankBy) {
+
+// Runs every minute (install once with installWarmer). Only works during picking hours and when there are new scans.
+function warmDashboard() {
+  const now = new Date();
+  const today = day_(now);
+  const sess = sessions_();
+  if (!sess.length) return;
+  const open = new Date(at_(today, sess[0].start).getTime() - 30 * 60000);
+  const close = new Date(at_(today, sess[sess.length - 1].end).getTime() + 60 * 60000);
+  if (now < open || now > close) return;
+  const props = PropertiesService.getScriptProperties();
+  const rows = String(taps_().getLastRow());
+  const cached = CacheService.getScriptCache().get('dash:' + today);
+  if (cached && props.getProperty('warmRows') === rows) {
+    // no new scans: refresh only every 5 minutes so the forecast clock keeps moving
+    const age = now.getTime() - Number(props.getProperty('warmAt') || 0);
+    if (age < 5 * 60000) return;
+  }
+  storeDash_(dashboardData_(today));
+  props.setProperty('warmRows', rows);
+  props.setProperty('warmAt', String(now.getTime()));
+}
+function installWarmer() {
+  removeWarmer();
+  ScriptApp.newTrigger('warmDashboard').timeBased().everyMinutes(1).create();
+}
+function removeWarmer() {
+  ScriptApp.getProjectTriggers().filter(t => t.getHandlerFunction() === 'warmDashboard').forEach(t => ScriptApp.deleteTrigger(t));
+}
+
+function dashboardData_(dateStr) {
   const now = new Date();
   const today = day_(now);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(dateStr || '') ? dateStr : today;
-  rankBy = rankBy === 'bags' ? 'bags' : 'hour';
   const pd = pickerData_();
   const all = tapsForDate_(date);
   const ok = all.filter(t => t.status === 'OK');
@@ -510,9 +544,7 @@ function dashboardData_(dateStr, rankBy) {
   const dayEnd = sess.length ? at_(date, sess[sess.length - 1].end) : at_(date, '17:00');
 
   const rows = perPicker_(date, ok, pd);
-  const ranked = rankBy === 'hour'
-    ? rows.filter(r => r.perHour !== null).sort((a, b) => b.perHour - a.perHour || b.bags - a.bags)
-    : rows.slice();
+  const byHour = rows.filter(r => r.perHour !== null).sort((a, b) => b.perHour - a.perHour || b.bags - a.bags);
 
   // estimate, run rate, forecast
   const estBins = bags / cal.bagsPerBin;
@@ -563,12 +595,13 @@ function dashboardData_(dateStr, rankBy) {
 
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   return {
-    date: date, isToday: date === today, rankBy: rankBy, updated: time_(now),
+    date: date, isToday: date === today, updated: time_(now),
     target: target, bags: bags, pickers: rows.length, registered: pd.list.length,
     est: est, cal: { bagsPerBin: round1_(cal.bagsPerBin), bpbFrom: cal.bpbFrom, exportPct: Math.round(cal.exportShare * 100), expFrom: cal.expFrom },
     forecast: forecast,
     actual: act ? { exp: act.exp, juice: act.juice, total: act.exp + act.juice, exportPct: (act.exp + act.juice) ? Math.round(act.exp / (act.exp + act.juice) * 100) : null } : null,
-    top: ranked.slice(0, 10), bottom: ranked.slice().reverse().slice(0, 10), rankedCount: ranked.length,
+    topHour: byHour.slice(0, 10), bottomHour: byHour.slice().reverse().slice(0, 10),
+    topBags: rows.slice(0, 10), bottomBags: rows.slice().reverse().slice(0, 10),
     problems: problems, duplicates: dups, manual: ok.filter(t => t.method === 'MANUAL').length,
     paper: ok.filter(t => t.method === 'PAPER').reduce((s, t) => s + t.bags, 0),
     teams: TEAMS, binTeams: BIN_TEAMS, blocks: blocks_(),
@@ -600,10 +633,7 @@ function perPicker_(date, okTaps, pd) {
 }
 
 function clearDashCache_(date) {
-  const today = day_(new Date());
-  const keys = [];
-  [date, date === today ? '' : null].forEach(d => { if (d !== null) ['hour', 'bags', ''].forEach(r => keys.push('dash:' + d + ':' + r)); });
-  try { CacheService.getScriptCache().removeAll(keys); } catch (e) {}
+  try { CacheService.getScriptCache().remove('dash:' + date); } catch (e) {}
 }
 function round1_(x) { return Math.round(x * 10) / 10; }
 
@@ -710,14 +740,16 @@ function loadTest() {
     });
   }
   const ingestTotal = Date.now() - t0;
-  const d0 = Date.now(); const d = dashboardData_(today, 'hour'); const dashMs = Date.now() - d0;
+  const d0 = Date.now(); const d = dashboardData_(today); const dashMs = Date.now() - d0;
+  storeDash_(d);
+  const c0 = Date.now(); dashboardData(today); const cachedMs = Date.now() - c0;
   const before = taps_().getLastRow();
   const s0 = Date.now(); ingestScans_(lastBatch, 'loadtest-resend', lastTeam); const resendMs = Date.now() - s0;
   if (taps_().getLastRow() !== before) Logger.log('WARNING: resent batch was stored twice');
-  const sh = sheet_('Load test', ['Run at', 'Scans', 'Batches', 'Avg batch ms', 'Slowest batch ms', 'All batches s', 'Dashboard ms', 'Resend 100 ms', 'Bags on dashboard', 'Taps rows']);
+  const sh = sheet_('Load test', ['Run at', 'Scans', 'Batches', 'Avg batch ms', 'Slowest batch ms', 'All batches s', 'Dashboard ms', 'Resend 100 ms', 'Bags on dashboard', 'Taps rows', 'Cached dashboard ms']);
   const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
-  sh.appendRow([new Date(), scans.length, times.length, avg, Math.max.apply(null, times), Math.round(ingestTotal / 1000), dashMs, resendMs, d.bags, taps_().getLastRow() - 1]);
-  Logger.log('Scans %s, batches %s, avg %s ms, slowest %s ms, dashboard %s ms, bags %s', scans.length, times.length, avg, Math.max.apply(null, times), dashMs, d.bags);
+  sh.appendRow([new Date(), scans.length, times.length, avg, Math.max.apply(null, times), Math.round(ingestTotal / 1000), dashMs, resendMs, d.bags, taps_().getLastRow() - 1, cachedMs]);
+  Logger.log('Scans %s, batches %s, avg %s ms, slowest %s ms, dashboard %s ms (background), dashboard from cache %s ms, bags %s', scans.length, times.length, avg, Math.max.apply(null, times), dashMs, cachedMs, d.bags);
 }
 
 function clearDemo() {

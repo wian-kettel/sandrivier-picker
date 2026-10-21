@@ -133,7 +133,7 @@
   function r0(x){ return Math.round(x); }
   function fail(e){ $('upd').textContent = 'Error: ' + e.message; }
   function load(){
-    if (st.view === 'today') google.script.run.withSuccessHandler(render).withFailureHandler(fail).dashboardData(st.date, st.rankBy);
+    if (st.view === 'today') google.script.run.withSuccessHandler(function(d){ st.last = d; render(d); }).withFailureHandler(fail).dashboardData(st.date);
     else google.script.run.withSuccessHandler(renderDetails).withFailureHandler(fail).detailsData(st.date);
   }
 
@@ -198,10 +198,11 @@
     if (d.paper) probs.push(d.paper + ' bags typed in from paper for this day.');
     $('probs').innerHTML = probs.length ? '<ul class="prob">' + probs.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('') + '</ul>' : '<div class="empty ok">Nothing needs attention.</div>';
 
-    $('rkHour').className = d.rankBy==='hour' ? 'on' : ''; $('rkBags').className = d.rankBy==='bags' ? 'on' : '';
-    $('rkNote').textContent = d.rankBy==='hour' ? 'per hour, breaks excluded, after 1 hour of scans' : 'by bags';
-    $('top').innerHTML = table(d.top, 'g');
-    $('bottom').innerHTML = table(d.bottom, 'r');
+    var h = st.rankBy === 'hour';
+    $('rkHour').className = h ? 'on' : ''; $('rkBags').className = h ? '' : 'on';
+    $('rkNote').textContent = h ? 'per hour, breaks excluded, after 1 hour of scans' : 'by bags';
+    $('top').innerHTML = table(h ? d.topHour : d.topBags, 'g');
+    $('bottom').innerHTML = table(h ? d.bottomHour : d.bottomBags, 'r');
   }
 
   function renderDetails(d){
@@ -223,8 +224,8 @@
   $('vToday').onclick = function(){ setView('today'); };
   $('vDetails').onclick = function(){ setView('details'); };
   $('date').onchange = function(e){ st.date = e.target.value; load(); };
-  $('rkHour').onclick = function(){ st.rankBy = 'hour'; load(); };
-  $('rkBags').onclick = function(){ st.rankBy = 'bags'; load(); };
+  $('rkHour').onclick = function(){ st.rankBy = 'hour'; if (st.last) render(st.last); };
+  $('rkBags').onclick = function(){ st.rankBy = 'bags'; if (st.last) render(st.last); };
   $('bsave').onclick = function(){
     var m = $('bmsg'); m.textContent = 'Saving...';
     google.script.run.withSuccessHandler(function(){ m.textContent = 'Saved.'; $('be').value=''; $('bj').value=''; load(); })
