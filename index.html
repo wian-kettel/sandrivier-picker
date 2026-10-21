@@ -119,6 +119,7 @@
 <script>
 (function(){
   'use strict';
+  var VERSION = '3.2';
   // ---------- storage ----------
   function get(k, d){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch(e){ return d; } }
   function put(k, v){ try { localStorage.setItem(k, JSON.stringify(v)); } catch(e){} }
@@ -414,7 +415,7 @@
       if (hrs >= 0.5 && used > 0) bt = 'Battery: ' + bl[0].lvl + '% at ' + hhmm(bl[0].t) + ', now ' + bl[bl.length-1].lvl + '%. About ' + (used/hrs).toFixed(1) +
         '% per hour, so a full charge lasts about ' + Math.round(100/(used/hrs)) + ' hours.';
     }
-    $('mInfo').innerHTML = ((cfg ? cfg.team + ' · ' + cfg.device : 'Not set up') + ' · ' + roster.pickers.length + ' bands · ' +
+    $('mInfo').innerHTML = 'App version ' + VERSION + '<br>' + ((cfg ? cfg.team + ' · ' + cfg.device : 'Not set up') + ' · ' + roster.pickers.length + ' bands · ' +
       queue.length + ' scans waiting · last sent ' + (ls ? hhmm(ls) : 'never')).replace(/</g,'') + '<br><br>' + bt;
     open('ovMenu');
   };
