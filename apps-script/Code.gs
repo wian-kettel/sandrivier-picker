@@ -263,9 +263,12 @@ function ingestScans_(scans, device, team) {
       accepted.push(s.id);
       if (seen[s.id]) return;                    // already stored (phone re-sent after a dropped reply)
       seen[s.id] = true;
+      // A tapped band only counts if the sheet knows that band (a replaced, removed or stolen band stops counting).
+      // A typed-in number (MANUAL) is matched on the picker number.
       let uid = normUid_(s.uid);
+      const method = String(s.method || 'NFC');
       let p = uid ? pd.byUid[uid] : null;
-      if (!p && s.no && pd.byNo[String(s.no)]) { p = pd.byNo[String(s.no)]; uid = p.uid; }
+      if (!p && method !== 'NFC' && s.no && pd.byNo[String(s.no)]) { p = pd.byNo[String(s.no)]; uid = p.uid; }
       const st = new Date(Number(s.t) || now.getTime());
       let status;
       if (!p) status = 'UNKNOWN';
@@ -275,10 +278,10 @@ function ingestScans_(scans, device, team) {
       if (status === 'OK') lastOk[p.no] = st;
       rows.push([now, day_(st), Utilities.formatDate(st, TZ, 'HH:mm:ss'),
                  p ? p.no : String(s.no || ''), p ? p.name : '', uid, String(s.block || ''), status,
-                 String(team || ''), String(device || ''), String(s.method || 'NFC'), String(s.id), st, 1]);
+                 String(team || ''), String(device || ''), method, String(s.id), st, 1]);
     });
     appendTaps_(rows);
-    return { ok: true, accepted: accepted, stored: rows.length };
+    return { ok: true, accepted: accepted, stored: rows.length, unknown: rows.filter(r => r[7] === 'UNKNOWN').length };
   } finally {
     lock.releaseLock();
   }
