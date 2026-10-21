@@ -15,12 +15,25 @@ farm's private Google Sheet. The farm PIN keeps anyone else from sending scans.
 | Google Sheet backend (`apps-script/`) | Pasted into the Sheet's Apps Script | Stores pickers and scans, dashboard, end of day bag-vs-bin check, Excel download |
 
 ## Rules built in
-- Unknown band: offers to register it (picker number, name, Day or Contract). Needs signal.
-- Same band again inside the repeat window (Settings: `Repeat window minutes`, default 2): **not counted**, logged as DUPLICATE.
-- Lost or forgotten band: **Type number** counts the bag by picker number, marked MANUAL so it shows on the dashboard.
-- Each phone is set to Team 1 or Team 2; the block is chosen on the phone each morning.
-- End of day: enter plastic and wooden bins per team on the dashboard. With `Kg per bag`, `Kg per plastic bin`
-  and `Kg per wooden bin` set on the Settings tab, the dashboard estimates how full the bags were on average.
+- Picker numbers are the ID. Bands are linked to numbers, so a replaced band keeps the picker's history.
+- Pre-loaded list: paste picker numbers and names (and Day/Contract) into the Pickers tab with Tag UID empty.
+  On the phone, tapping a new band and typing the number links it. Name only needed for someone not on the list.
+- Replace band: tap the new band, type the picker number, confirm "replace". The old band is kept in "Old tags".
+- Same picker again inside the repeat window (Settings: `Repeat window minutes`, default 2): **not counted**, logged as DUPLICATE.
+- Manual mode: **Type number** stays open, number then Count bag, for a day with broken or forgotten bands (logged MANUAL).
+- Day from paper: Details page, one line per picker "number bags" (logged PAPER).
+- Scans are sent in batches every 30 seconds (or at 100 waiting). Works without signal.
+
+## Dashboard
+- **Today:** export bins (estimate) against the target, total bins, export share, run rate and forecast to the end of the
+  last picking session, top 10 and bottom 10 (per hour, breaks excluded), items that need attention, and Fanus's actual bins.
+- **Details:** every picker, fastest/slowest pairs, 7-day top 10, bags per block and per hour, day-from-paper entry.
+- Estimates use `Bags per bin` (44) and `Expected export %` until Fanus has entered actual bins; after that they learn
+  from the last 7 entered days. Target: `Export bin target` (72). Breaks: `Picking sessions`.
+
+## Load test
+Run `loadTest` in the Apps Script editor: about 7,500 scans for 50 demo pickers, sent like two phones would.
+Timings land on the "Load test" tab. Run `clearDemo` afterwards.
 
 ## Setting up a phone
 1. Open `https://wian-kettel.github.io/sandrivier-picker/` in **Chrome** on the phone.

@@ -3,40 +3,51 @@
 <head>
 <base target="_top">
 <style>
-  :root{--bg:#f6f5f1;--card:#fff;--ink:#1f2933;--mute:#6b7280;--line:#e5e2da;--green:#15803d;--red:#b91c1c;--amber:#b45309;--bar:#86b98f}
+  :root{--bg:#f6f5f1;--card:#fff;--ink:#1f2933;--mute:#6b7280;--line:#e5e2da;--green:#15803d;--red:#b91c1c;--amber:#b45309;--bar:#86b98f;--exp:#15803d;--juice:#d97706}
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);font-family:-apple-system,Segoe UI,Roboto,sans-serif;font-size:15px}
-  header{padding:16px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  header{padding:14px 16px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
   h1{font-size:20px;margin:0}
   .muted{color:var(--mute);font-size:13px}
   .controls{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-  select,input{font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff}
-  input.n{width:80px}
+  select,input,textarea{font-size:15px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:#fff;font-family:inherit}
+  input.n{width:76px}
   a.btn,button{font-size:14px;padding:7px 12px;border-radius:6px;background:var(--ink);color:#fff;text-decoration:none;border:0;cursor:pointer}
   a.btn.light,button.light{background:#fff;color:var(--ink);border:1px solid var(--line)}
+  .seg{display:inline-flex}
   .seg button{background:#fff;color:var(--ink);border:1px solid var(--line);border-radius:0}
   .seg button:first-child{border-radius:6px 0 0 6px}.seg button:last-child{border-radius:0 6px 6px 0}
   .seg button.on{background:var(--ink);color:#fff}
   main{padding:0 16px 32px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
-  .kpis{grid-column:1/-1;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(140px,1fr))}
-  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px;min-width:0}
-  .kpi .v{font-size:30px;font-weight:800}
-  h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;gap:8px;align-items:center}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;min-width:0}
+  .wide{grid-column:1/-1}
+  h2{font-size:15px;margin:0 0 10px;display:flex;justify-content:space-between;gap:8px;align-items:center;flex-wrap:wrap}
+  .hero{display:grid;gap:16px;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));align-items:end}
+  .big{font-size:44px;font-weight:800;line-height:1}
+  .big small{font-size:20px;color:var(--mute);font-weight:600}
+  .lab{font-size:13px;color:var(--mute);margin-bottom:6px}
+  .progress{height:14px;background:#eceae4;border-radius:7px;overflow:hidden;margin-top:10px}
+  .progress div{height:100%;background:var(--exp)}
+  .split{display:flex;height:14px;border-radius:7px;overflow:hidden;margin-top:10px}
+  .split .e{background:var(--exp)} .split .j{background:var(--juice)}
+  .fc{margin-top:14px;padding:10px 12px;border-radius:8px;background:#f1f5f0;font-size:15px}
+  .fc.warn{background:#fdf3e7}
   .scroll{overflow-x:auto}
   table{width:100%;border-collapse:collapse}
   td,th{padding:6px 4px;border-bottom:1px solid var(--line);text-align:left;font-size:14px;white-space:nowrap}
   th{color:var(--mute);font-weight:600;font-size:12px}
   td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
   .pill{display:inline-block;min-width:34px;text-align:center;border-radius:12px;padding:2px 8px;color:#fff;font-weight:700}
-  .g{background:var(--green)} .r{background:var(--red)} .a{background:var(--amber)}
+  .g{background:var(--green)} .r{background:var(--red)}
   .tag{font-size:11px;border:1px solid var(--line);border-radius:4px;padding:0 4px;color:var(--mute)}
   .barrow{display:flex;align-items:center;gap:8px;margin:5px 0;font-size:14px}
-  .barrow .lab{width:72px;flex:none}
+  .barrow .lb{width:72px;flex:none}
   .barrow .bar{height:16px;background:var(--bar);border-radius:3px}
-  .wide{grid-column:1/-1}
   .empty{color:var(--mute);padding:8px 0}
-  .form{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:10px}
-  .note{font-size:13px;color:var(--mute);margin-top:8px}
+  .form{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+  .ok{color:var(--green)} .bad{color:var(--red)}
+  ul.prob{margin:0;padding-left:18px} ul.prob li{margin:4px 0}
+  #details{display:none}
 </style>
 </head>
 <body>
@@ -46,57 +57,93 @@
     <div class="muted" id="upd">Loading...</div>
   </div>
   <div class="controls">
-    <label class="muted">Day <input type="date" id="date"></label>
-    <span class="seg"><button id="rk-bags" class="on">Rank by bags</button><button id="rk-hour">Rank by bags per hour</button></span>
+    <span class="seg"><button id="vToday" class="on">Today</button><button id="vDetails">Details</button></span>
+    <input type="date" id="date">
     <a class="btn light" id="sheet" target="_blank" href="#">Open sheet</a>
     <a class="btn" id="xlsx" target="_blank" href="#">Download Excel</a>
   </div>
 </header>
 
-<main>
-  <div class="kpis">
-    <div class="card kpi"><div class="muted">Bags</div><div class="v" id="k-total">–</div></div>
-    <div class="card kpi"><div class="muted">Pickers working</div><div class="v" id="k-pick">–</div></div>
-    <div class="card kpi"><div class="muted">Average bags per picker</div><div class="v" id="k-avg">–</div></div>
-    <div class="card kpi"><div class="muted">Typed in by hand</div><div class="v" id="k-man">–</div></div>
-    <div class="card kpi"><div class="muted">Double scans blocked</div><div class="v" id="k-dup">–</div></div>
+<main id="today">
+  <div class="card wide">
+    <div class="hero">
+      <div>
+        <div class="lab">Export bins (estimate)</div>
+        <div class="big" id="hExp">–</div>
+        <div class="progress"><div id="hExpBar" style="width:0"></div></div>
+      </div>
+      <div>
+        <div class="lab">Total bins (estimate)</div>
+        <div class="big" id="hTot">–</div>
+        <div class="muted" id="hBags"></div>
+      </div>
+      <div>
+        <div class="lab">Export share</div>
+        <div class="big" id="hPct">–</div>
+        <div class="split"><div class="e" id="sE"></div><div class="j" id="sJ"></div></div>
+      </div>
+    </div>
+    <div class="fc" id="fc"></div>
+    <div class="muted" id="basis" style="margin-top:8px"></div>
   </div>
 
+  <div class="card">
+    <h2>Needs attention</h2>
+    <div id="probs"></div>
+  </div>
+
+  <div class="card"><h2>Top 10 <span class="seg"><button id="rkHour" class="on">per hour</button><button id="rkBags">bags</button></span></h2><div class="scroll" id="top"></div></div>
+  <div class="card"><h2>Bottom 10 <span class="muted" id="rkNote"></span></h2><div class="scroll" id="bottom"></div></div>
   <div class="card wide">
-    <h2>End of day check: bags against bins</h2>
-    <div class="scroll" id="recon"></div>
+    <h2>Actual bins (Fanus, end of day)</h2>
+    <div id="act" class="muted" style="margin-bottom:10px"></div>
     <div class="form">
       <select id="bt"></select>
-      <label class="muted">Plastic bins <input class="n" id="bp" inputmode="numeric"></label>
-      <label class="muted">Wooden bins <input class="n" id="bw" inputmode="numeric"></label>
-      <button id="bsave">Save bins</button>
+      <label class="muted">Export (plastic) <input class="n" id="be" inputmode="numeric"></label>
+      <label class="muted">Juice (wooden) <input class="n" id="bj" inputmode="numeric"></label>
+      <button id="bsave">Save</button>
       <span class="muted" id="bmsg"></span>
     </div>
-    <div class="note" id="wnote"></div>
   </div>
 
-  <div class="card"><h2>Top 10 <span class="muted" id="rk1"></span></h2><div class="scroll" id="top"></div></div>
-  <div class="card"><h2>Bottom 10 <span class="muted" id="rk2"></span></h2><div class="scroll" id="bottom"></div></div>
-  <div class="card"><h2>Suggested pairs (strongest with weakest)</h2><div class="scroll" id="pairs"></div></div>
+</main>
+
+<main id="details">
+  <div class="card"><h2>Suggested pairs (fastest with slowest, per hour)</h2><div class="scroll" id="pairs"></div></div>
   <div class="card"><h2>Last 7 days: top 10 for rewards</h2><div class="scroll" id="week"></div></div>
   <div class="card"><h2>Bags per block</h2><div id="blocks"></div></div>
   <div class="card"><h2>Bags per hour of the day</h2><div id="hourly"></div></div>
-  <div class="card wide"><h2>All pickers today</h2><div class="scroll" id="all"></div></div>
+  <div class="card wide"><h2>Every picker</h2><div class="scroll" id="all"></div></div>
+  <div class="card wide">
+    <h2>Type in a day from the clipboard</h2>
+    <div class="muted" style="margin-bottom:8px">For a day the phone was not used. One line per picker: picker number, space, bags. Example:<br>12 148<br>15 162</div>
+    <div class="form" style="margin-bottom:8px">
+      <select id="pt"></select><select id="pb"></select>
+    </div>
+    <textarea id="ptext" rows="8" style="width:100%;max-width:420px"></textarea>
+    <div class="form" style="margin-top:8px"><button id="psave">Save for this day</button><span class="muted" id="pmsg" style="white-space:pre-line"></span></div>
+  </div>
 </main>
 
 <script>
-  var state = { date: '', rankBy: 'bags', loaded: false };
+  var st = { date: '', rankBy: 'hour', view: 'today', filled: false };
+  function $(id){ return document.getElementById(id); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
   function dash(v){ return v==null ? '–' : v; }
-  function load(){ google.script.run.withSuccessHandler(render).withFailureHandler(function(e){ document.getElementById('upd').textContent = 'Error: ' + e.message; }).dashboardData(state.date, state.rankBy); }
+  function r0(x){ return Math.round(x); }
+  function fail(e){ $('upd').textContent = 'Error: ' + e.message; }
+  function load(){
+    if (st.view === 'today') google.script.run.withSuccessHandler(render).withFailureHandler(fail).dashboardData(st.date, st.rankBy);
+    else google.script.run.withSuccessHandler(renderDetails).withFailureHandler(fail).detailsData(st.date);
+  }
 
   function table(rows, cls, full){
-    if (!rows.length) return '<div class="empty">' + (state.rankBy==='hour' ? 'No picker has scanned for an hour yet.' : 'No bags scanned yet.') + '</div>';
-    var h = '<table><tr><th>#</th><th>Picker</th><th class="n">Bags</th><th class="n">Per hour</th><th>Block</th><th>Team</th>' + (full ? '<th>First</th><th>Last</th><th class="n">Typed</th>' : '') + '</tr>';
+    if (!rows.length) return '<div class="empty">' + (st.rankBy==='hour' && !full ? 'Nobody has an hour of scans yet.' : 'No bags yet.') + '</div>';
+    var h = '<table><tr><th>#</th><th>Picker</th><th class="n">Bags</th><th class="n">Per hour</th><th>Team</th>' + (full ? '<th>Block</th><th>First</th><th>Last</th><th class="n">Typed</th><th class="n">Paper</th>' : '') + '</tr>';
     rows.forEach(function(r,i){
       h += '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+' <span class="muted">#'+esc(r.no)+'</span> <span class="tag">'+esc(r.type)+'</span></td>'+
-           '<td class="n"><span class="pill '+cls+'">'+r.bags+'</span></td><td class="n">'+dash(r.perHour)+'</td><td>'+esc(r.block)+'</td><td>'+esc(r.team)+'</td>'+
-           (full ? '<td>'+esc(r.first)+'</td><td>'+esc(r.last)+'</td><td class="n">'+(r.manual||'')+'</td>' : '') + '</tr>';
+           '<td class="n"><span class="pill '+cls+'">'+r.bags+'</span></td><td class="n">'+dash(r.perHour)+'</td><td>'+esc(r.team)+'</td>'+
+           (full ? '<td>'+esc(r.block)+'</td><td>'+esc(r.first)+'</td><td>'+esc(r.last)+'</td><td class="n">'+(r.manual||'')+'</td><td class="n">'+(r.paper||'')+'</td>' : '') + '</tr>';
     });
     return h + '</table>';
   }
@@ -104,79 +151,96 @@
     var keys = Object.keys(obj).sort();
     if (!keys.length) return '<div class="empty">Nothing yet.</div>';
     var max = Math.max.apply(null, keys.map(function(k){return obj[k];}));
-    return keys.map(function(k){
-      return '<div class="barrow"><span class="lab">'+esc(k)+'</span><span class="bar" style="width:'+Math.max(2,Math.round(obj[k]/max*65))+'%"></span><span>'+obj[k]+'</span></div>';
-    }).join('');
+    return keys.map(function(k){ return '<div class="barrow"><span class="lb">'+esc(k)+'</span><span class="bar" style="width:'+Math.max(2,Math.round(obj[k]/max*65))+'%"></span><span>'+obj[k]+'</span></div>'; }).join('');
   }
-  function reconTable(d){
-    var rows = d.recon.concat(d.recon.length > 1 ? [d.reconTotal] : []);
-    if (!rows.length) return '<div class="empty">No bags or bins for this day yet.</div>';
-    var h = '<table><tr><th>Team</th><th class="n">Bags</th><th class="n">Plastic bins</th><th class="n">Wooden bins</th><th class="n">Kg in bags (est.)</th><th class="n">Kg in bins (est.)</th><th class="n">Bags were on average</th></tr>';
-    rows.forEach(function(r){
-      var pct = r.pct==null ? (r.entered ? '–' : '<span class="muted">enter bins</span>') :
-        (r.pct>115 ? '<span class="pill a">'+r.pct+'%: check weights or bin count</span>' :
-         '<span class="pill '+(r.pct>=90?'g':(r.pct>=75?'a':'r'))+'">'+r.pct+'% full</span>');
-      h += '<tr><td>'+esc(r.team)+'</td><td class="n">'+r.bags+'</td><td class="n">'+(r.entered?r.plastic:'–')+'</td><td class="n">'+(r.entered?r.wooden:'–')+'</td>'+
-           '<td class="n">'+dash(r.kgIn)+'</td><td class="n">'+(r.entered?dash(r.kgOut):'–')+'</td><td class="n">'+pct+'</td></tr>';
-    });
-    return h + '</table>';
+  function common(d){
+    st.date = d.date; $('date').value = d.date;
+    if (!st.filled) {
+      $('bt').innerHTML = d.binTeams.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('');
+      $('pt').innerHTML = d.teams.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('');
+      $('pb').innerHTML = d.blocks.map(function(b){ return '<option>'+esc(b)+'</option>'; }).join('');
+      st.filled = true;
+    }
   }
 
   function render(d){
-    state.date = d.date;
-    document.getElementById('date').value = d.date;
-    document.getElementById('upd').textContent = d.registered + ' bands registered · updated ' + d.updated + ' · refreshes every 30 seconds';
-    document.getElementById('k-total').textContent = d.total;
-    document.getElementById('k-pick').textContent = d.pickers;
-    document.getElementById('k-avg').textContent = d.avg;
-    document.getElementById('k-man').textContent = d.manual;
-    document.getElementById('k-dup').textContent = d.duplicates;
-    document.getElementById('sheet').href = d.sheetUrl;
-    document.getElementById('xlsx').href = d.xlsxUrl;
-    document.getElementById('rk-bags').className = d.rankBy==='bags' ? 'on' : '';
-    document.getElementById('rk-hour').className = d.rankBy==='hour' ? 'on' : '';
-    var lbl = d.rankBy==='hour' ? 'by bags per hour, pickers with at least 1 hour of scans' : 'by bags';
-    document.getElementById('rk1').textContent = lbl;
-    document.getElementById('rk2').textContent = lbl;
+    common(d);
+    $('upd').textContent = (d.isToday ? 'Today' : d.date) + ' · ' + d.pickers + ' pickers · updated ' + d.updated + (d.isToday ? ' · refreshes every minute' : '');
+    $('sheet').href = d.sheetUrl; $('xlsx').href = d.xlsxUrl;
 
-    if (!state.loaded) {
-      document.getElementById('bt').innerHTML = d.teams.map(function(t){ return '<option>'+esc(t)+'</option>'; }).join('');
-      state.loaded = true;
+    var useAct = d.actual && !d.isToday;
+    var exp = useAct ? d.actual.exp : d.est.exp, tot = useAct ? d.actual.total : d.est.bins;
+    var pct = useAct ? d.actual.exportPct : d.cal.exportPct;
+    $('hExp').innerHTML = (useAct ? exp : r0(exp)) + ' <small>/ ' + d.target + '</small>';
+    $('hExpBar').style.width = Math.min(100, exp / d.target * 100) + '%';
+    $('hTot').textContent = useAct ? tot : r0(tot);
+    $('hBags').textContent = d.bags + ' bags scanned' + (useAct ? ' · actual bins from Fanus' : '');
+    $('hPct').textContent = pct == null ? '–' : pct + '%';
+    $('sE').style.width = (pct||0) + '%'; $('sJ').style.width = (100-(pct||0)) + '%';
+
+    var fc = $('fc'), f = d.forecast;
+    if (!d.isToday) { fc.style.display = 'none'; }
+    else if (!f) { fc.style.display = ''; fc.className = 'fc'; fc.textContent = 'The forecast starts after 15 minutes of picking.'; }
+    else {
+      fc.style.display = '';
+      var reach = f.reachAt === 'reached' ? 'Target of ' + d.target + ' export bins reached.' :
+        f.reachAt ? d.target + ' export bins expected around <b>' + f.reachAt + '</b>.' :
+        'At this pace about <b>' + r0(f.endExp) + ' export bins</b> by ' + f.endTime + (f.neededPerHour ? '. To reach ' + d.target + ' the teams need about ' + f.neededPerHour + ' bags per hour from now.' : '.');
+      fc.className = 'fc' + (f.reachAt ? '' : ' warn');
+      fc.innerHTML = 'Picking ' + f.ratePerHour + ' bags per hour (about ' + f.binsPerHour + ' bins per hour). Forecast ' + r0(f.endBins) + ' bins in total by ' + f.endTime + '. ' + reach;
     }
-    document.getElementById('recon').innerHTML = reconTable(d);
-    document.getElementById('wnote').textContent = d.weightsSet ?
-      ('Estimates use ' + d.weights.bag + ' kg per full bag, ' + d.weights.plastic + ' kg per plastic bin and ' + d.weights.wooden + ' kg per wooden bin (change these on the Settings tab). A low percentage means bags were not full.') :
-      'Fill in Kg per bag, Kg per plastic bin and Kg per wooden bin on the Settings tab of the sheet to switch this check on.';
+    $('basis').textContent = 'Estimate uses ' + d.cal.bagsPerBin + ' bags per bin (' + d.cal.bpbFrom + ') and ' + d.cal.exportPct + '% export (' + d.cal.expFrom + '). It improves each time Fanus enters the actual bins.';
 
-    document.getElementById('top').innerHTML = table(d.top, 'g');
-    document.getElementById('bottom').innerHTML = table(d.bottom, 'r');
-    document.getElementById('blocks').innerHTML = bars(d.byBlock);
-    document.getElementById('hourly').innerHTML = bars(d.hourly);
-    document.getElementById('all').innerHTML = table(d.rows, 'g', true);
+    $('act').innerHTML = d.actual ? ('Entered: <b>' + d.actual.exp + ' export</b> and <b>' + d.actual.juice + ' juice</b> (' + d.actual.exportPct + '% export). The app estimated ' + r0(d.est.bins) + ' bins from ' + d.bags + ' bags.') : 'Not entered yet for this day.';
 
-    document.getElementById('pairs').innerHTML = d.pairs.length ?
-      '<table><tr><th>Strong</th><th class="n">'+(d.rankBy==='hour'?'Per hour':'Bags')+'</th><th>With</th><th class="n">'+(d.rankBy==='hour'?'Per hour':'Bags')+'</th></tr>' +
-      d.pairs.map(function(p){ var k = d.rankBy==='hour' ? 'perHour' : 'bags';
-        return '<tr><td>'+esc(p.strong.name)+'</td><td class="n">'+p.strong[k]+'</td><td>'+esc(p.weak.name)+'</td><td class="n">'+p.weak[k]+'</td></tr>'; }).join('') + '</table>'
-      : '<div class="empty">Needs at least two pickers.</div>';
+    var probs = d.problems.slice();
+    if (d.duplicates) probs.push(d.duplicates + ' double scan' + (d.duplicates>1?'s':'') + ' blocked (not counted).');
+    if (d.paper) probs.push(d.paper + ' bags typed in from paper for this day.');
+    $('probs').innerHTML = probs.length ? '<ul class="prob">' + probs.map(function(p){ return '<li>'+esc(p)+'</li>'; }).join('') + '</ul>' : '<div class="empty ok">Nothing needs attention.</div>';
 
-    document.getElementById('week').innerHTML = d.week.length ?
-      '<table><tr><th>#</th><th>Picker</th><th class="n">Bags</th><th class="n">Days</th></tr>' +
+    $('rkHour').className = d.rankBy==='hour' ? 'on' : ''; $('rkBags').className = d.rankBy==='bags' ? 'on' : '';
+    $('rkNote').textContent = d.rankBy==='hour' ? 'per hour, breaks excluded, after 1 hour of scans' : 'by bags';
+    $('top').innerHTML = table(d.top, 'g');
+    $('bottom').innerHTML = table(d.bottom, 'r');
+  }
+
+  function renderDetails(d){
+    common(d);
+    $('upd').textContent = d.date + ' · details';
+    $('all').innerHTML = table(d.rows, 'g', true);
+    $('blocks').innerHTML = bars(d.byBlock);
+    $('hourly').innerHTML = bars(d.hourly);
+    $('pairs').innerHTML = d.pairs.length ? '<table><tr><th>Fast</th><th class="n">Per hour</th><th>With</th><th class="n">Per hour</th></tr>' +
+      d.pairs.map(function(p){ return '<tr><td>'+esc(p.strong.name)+'</td><td class="n">'+p.strong.perHour+'</td><td>'+esc(p.weak.name)+'</td><td class="n">'+p.weak.perHour+'</td></tr>'; }).join('') + '</table>'
+      : '<div class="empty">Needs two pickers with an hour of scans.</div>';
+    $('week').innerHTML = d.week.length ? '<table><tr><th>#</th><th>Picker</th><th class="n">Bags</th><th class="n">Days</th></tr>' +
       d.week.map(function(r,i){ return '<tr><td>'+(i+1)+'</td><td>'+esc(r.name)+' <span class="muted">#'+esc(r.no)+'</span> <span class="tag">'+esc(r.type)+'</span></td><td class="n">'+r.bags+'</td><td class="n">'+r.days+'</td></tr>'; }).join('') + '</table>'
       : '<div class="empty">No bags in the last 7 days.</div>';
   }
 
-  document.getElementById('date').addEventListener('change', function(e){ state.date = e.target.value; load(); });
-  document.getElementById('rk-bags').addEventListener('click', function(){ state.rankBy = 'bags'; load(); });
-  document.getElementById('rk-hour').addEventListener('click', function(){ state.rankBy = 'hour'; load(); });
-  document.getElementById('bsave').addEventListener('click', function(){
-    var m = document.getElementById('bmsg'); m.textContent = 'Saving...';
-    google.script.run.withSuccessHandler(function(){ m.textContent = 'Saved.'; document.getElementById('bp').value=''; document.getElementById('bw').value=''; load(); })
+  function setView(v){ st.view = v; $('vToday').className = v==='today'?'on':''; $('vDetails').className = v==='details'?'on':'';
+    $('today').style.display = v==='today' ? 'grid' : 'none'; $('details').style.display = v==='details' ? 'grid' : 'none'; load(); }
+  $('vToday').onclick = function(){ setView('today'); };
+  $('vDetails').onclick = function(){ setView('details'); };
+  $('date').onchange = function(e){ st.date = e.target.value; load(); };
+  $('rkHour').onclick = function(){ st.rankBy = 'hour'; load(); };
+  $('rkBags').onclick = function(){ st.rankBy = 'bags'; load(); };
+  $('bsave').onclick = function(){
+    var m = $('bmsg'); m.textContent = 'Saving...';
+    google.script.run.withSuccessHandler(function(){ m.textContent = 'Saved.'; $('be').value=''; $('bj').value=''; load(); })
       .withFailureHandler(function(e){ m.textContent = e.message; })
-      .saveBins(state.date, document.getElementById('bt').value, document.getElementById('bp').value, document.getElementById('bw').value);
-  });
+      .saveBins(st.date, $('bt').value, $('be').value, $('bj').value);
+  };
+  $('psave').onclick = function(){
+    var m = $('pmsg'); m.textContent = 'Saving...';
+    google.script.run.withSuccessHandler(function(r){
+        m.textContent = 'Saved ' + r.saved + ' pickers, ' + r.bags + ' bags.' + (r.alreadyHadPaper ? ' Note: this day already had paper entries, check for doubles in the sheet.' : '');
+        $('ptext').value = ''; })
+      .withFailureHandler(function(e){ m.textContent = e.message; })
+      .saveBackfill(st.date, $('pt').value, $('pb').value, $('ptext').value);
+  };
   load();
-  setInterval(load, 30000);
+  setInterval(function(){ if (st.view === 'today') load(); }, 60000);
 </script>
 </body>
 </html>

@@ -82,7 +82,9 @@
   <h2>Type the picker number</h2>
   <div id="kpdisp"></div>
   <div class="keys" id="keys"></div>
-  <div class="row"><button id="kCancel">Cancel</button><button class="primary" id="kOk">Count bag</button></div>
+  <div class="row"><button id="kCancel">Done</button><button class="primary" id="kOk">Count bag</button></div>
+  <div class="msg" id="kres" style="font-size:20px;text-align:center"></div>
+  <div class="small" style="text-align:center;margin-top:6px">Stays open so you can type bag after bag. Press Done when finished.</div>
 </div>
 
 <!-- register -->
@@ -90,10 +92,11 @@
   <h2>New band</h2>
   <div class="small" id="rUid"></div>
   <label>Picker number</label><input id="rNo" inputmode="numeric">
-  <label>Name and surname</label><input id="rName">
+  <label>Name and surname (leave empty if the picker is already on the list)</label><input id="rName">
   <label>Paid as</label><select id="rType"><option>Day</option><option>Contract</option></select>
   <div class="msg" id="rMsg"></div>
-  <div class="row"><button id="rCancel">Cancel</button><button class="primary" id="rSave">Register</button></div>
+  <div class="row"><button id="rCancel">Cancel</button><button class="primary" id="rSave">Link band</button></div>
+  <div class="row"><button id="rReplace" style="display:none;background:var(--dup)">Yes, replace the old band</button></div>
 </div>
 
 <!-- today -->
@@ -176,7 +179,7 @@
     var now = Date.now();
     var log = getLog();
     var lastOk = 0, n = 0;
-    log.forEach(function(s){ if (s.uid === p.uid && s.status === 'OK') { n++; if (s.t > lastOk) lastOk = s.t; } });
+    log.forEach(function(s){ if (String(s.no) === String(p.no) && s.status === 'OK') { n++; if (s.t > lastOk) lastOk = s.t; } });
     var windowMs = (roster.repeatMinutes || 2) * 60000;
     var status = (lastOk && now - lastOk < windowMs) ? 'DUPLICATE' : 'OK';
     var scan = { id: uuid(), uid: p.uid, no: p.no, name: p.name, block: $('block').value, t: now, method: method, status: status };
@@ -193,7 +196,8 @@
       show('var(--dup)', 'NOT COUNTED', p.name + '  #' + p.no, '', 'Already counted ' + Math.round((now-lastOk)/1000) + ' s ago. Wait ' + wait + ' s.', 3500);
     }
     updateSync();
-    setTimeout(sync, 500);
+    if (queue.length >= 100) sync();          // otherwise scans go in batches every 30 seconds
+    return status;
   }
 
   function onBand(serial){
@@ -341,37 +345,54 @@
     });
   })();
   $('bManual').onclick = function(){ if (!cfg) return openSetup(); kp = ''; $('kpdisp').textContent = ''; open('ovKey'); };
-  $('kCancel').onclick = function(){ close('ovKey'); };
+  $('kCancel').onclick = function(){ close('ovKey'); $('kres').textContent = ''; idle(); };
   $('kOk').onclick = function(){
-    var p = byNo(kp); close('ovKey');
-    if (!p) { feedback('bad'); return show('var(--bad)', 'NO PICKER', 'Number ' + (kp || '?') + ' is not registered', '', 'Refresh the picker list in Menu if this is a new picker.', 3500); }
-    count(p, 'MANUAL');
+    var p = byNo(kp), r = $('kres');
+    if (!p) { feedback('bad'); r.style.color = '#f87171'; r.textContent = 'Number ' + (kp || '?') + ' is not on the picker list'; }
+    else {
+      var stt = count(p, 'MANUAL');
+      var n = getLog().filter(function(x){ return String(x.no) === String(p.no) && x.status === 'OK'; }).length;
+      r.style.color = stt === 'OK' ? '#4ade80' : '#fbbf24';
+      r.textContent = (stt === 'OK' ? 'Counted: ' : 'NOT counted (too soon): ') + p.name + ' #' + p.no + ', ' + n + ' bags today';
+    }
+    kp = ''; $('kpdisp').textContent = '';
   };
 
   // register
   function openReg(uid){
     $('rUid').textContent = 'Band ' + uid; $('rNo').value = ''; $('rName').value = ''; $('rType').value = 'Day'; $('rMsg').textContent = '';
+    $('rReplace').style.display = 'none';
     open('ovReg');
   }
   $('rCancel').onclick = function(){ close('ovReg'); idle(); };
-  $('rSave').onclick = function(){
-    if (!navigator.onLine) { $('rMsg').textContent = 'Registering needs signal. Try again where there is signal.'; return; }
-    $('rMsg').textContent = 'Saving...'; $('rSave').disabled = true;
-    sendJson({ action: 'register', pin: cfg.pin, uid: regUid, no: $('rNo').value.trim(), name: $('rName').value.trim(), type: $('rType').value })
+  function register(replace){
+    if (!navigator.onLine) { $('rMsg').textContent = 'Linking a band needs signal. Try again where there is signal.'; return; }
+    $('rMsg').textContent = 'Saving...'; $('rSave').disabled = true; $('rReplace').style.display = 'none';
+    sendJson({ action: 'register', pin: cfg.pin, uid: regUid, no: $('rNo').value.trim(), name: $('rName').value.trim(), type: $('rType').value, replace: !!replace })
       .then(function(res){
         $('rSave').disabled = false;
-        if (!res.ok) { $('rMsg').textContent = res.error || 'Could not register'; return; }
+        if (!res.ok) {
+          var e = res.error || 'Could not link the band';
+          if (e.indexOf('HAS_BAND:') === 0) {
+            $('rMsg').textContent = 'Picker #' + $('rNo').value.trim() + ' (' + e.slice(9) + ') already has a band. Is this a replacement for a lost or broken band?';
+            $('rReplace').style.display = '';
+          } else $('rMsg').textContent = e;
+          return;
+        }
+        roster.pickers = roster.pickers.filter(function(x){ return String(x.no) !== String(res.picker.no); });
         roster.pickers.push(res.picker); put('roster', roster);
         close('ovReg'); feedback('ok');
-        show('var(--ok)', 'BAND LINKED', res.picker.name + '  #' + res.picker.no, '', 'Tap again to count a bag.', 3000);
+        show('var(--ok)', replace ? 'BAND REPLACED' : 'BAND LINKED', res.picker.name + '  #' + res.picker.no, '', 'Tap again to count a bag.', 3000);
       }).catch(function(){ $('rSave').disabled = false; $('rMsg').textContent = 'No reply from the sheet. Check signal and try again.'; });
-  };
+  }
+  $('rSave').onclick = function(){ register(false); };
+  $('rReplace').onclick = function(){ register(true); };
 
   // today
   $('bToday').onclick = function(){
     var per = {};
     getLog().forEach(function(s){
-      var r = per[s.uid] || (per[s.uid] = { name: s.name, no: s.no, ok: 0, dup: 0, last: 0 });
+      var r = per[s.no] || (per[s.no] = { name: s.name, no: s.no, ok: 0, dup: 0, last: 0 });
       if (s.status === 'OK') { r.ok++; if (s.t > r.last) r.last = s.t; } else r.dup++;
     });
     var rows = Object.keys(per).map(function(k){ return per[k]; }).sort(function(a,b){ return b.ok - a.ok; });
@@ -409,7 +430,7 @@
   window.addEventListener('offline', updateSync);
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
   cleanupOldLogs(); applyCfg(); fillBlocks(); updateSync(); refreshBattery(); idle();
-  setInterval(sync, 15000);
+  setInterval(sync, 30000);
   setInterval(refreshBattery, 60000);
   setInterval(function(){ if (navigator.onLine) loadRoster(true); }, 10 * 60000);
   if (cfg) loadRoster(true);
