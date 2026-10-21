@@ -79,21 +79,27 @@ function json_(o) { return ContentService.createTextOutput(JSON.stringify(o)).se
 function addDays_(date, n) { return day_(new Date(new Date(date + 'T12:00:00+02:00').getTime() + n * 86400000)); }
 function at_(date, hhmm) { return new Date(date + 'T' + hhmm + ':00+02:00'); }
 
+// Settings, pickers and sessions are read once per request and remembered (each sheet read costs ~0.1 s)
+let MEMO_ = {};
 function getSetting_(key) {
-  const v = settings_().getDataRange().getValues();
-  for (let i = 1; i < v.length; i++) if (v[i][0] === key) return String(v[i][1]);
-  return '';
+  if (!MEMO_.settings) {
+    MEMO_.settings = {};
+    settings_().getDataRange().getValues().slice(1).forEach(r => { if (r[0]) MEMO_.settings[r[0]] = String(r[1]); });
+  }
+  return MEMO_.settings[key] !== undefined ? MEMO_.settings[key] : '';
 }
 function setSetting_(key, val) {
   const sh = settings_();
   const v = sh.getDataRange().getValues();
+  MEMO_.settings = null;
   for (let i = 1; i < v.length; i++) if (v[i][0] === key) { sh.getRange(i + 1, 2).setValue(val); return; }
   sh.appendRow([key, val]);
 }
 function repeatMs_() { return (num_(getSetting_('Repeat window minutes')) || 2) * 60000; }
 function blocks_()   { return getSetting_('Blocks').split(',').map(s => s.trim()).filter(String); }
 function sessions_() {
-  return getSetting_('Picking sessions').split(',').map(s => s.trim().split('-')).filter(p => p.length === 2)
+  if (MEMO_.sessions) return MEMO_.sessions;
+  return MEMO_.sessions = getSetting_('Picking sessions').split(',').map(s => s.trim().split('-')).filter(p => p.length === 2)
     .map(p => ({ start: p[0].trim(), end: p[1].trim() }));
 }
 // picking minutes between two moments on one day, breaks excluded
@@ -115,6 +121,7 @@ function checkPin_(pin) {
 /* ---------------- pickers ---------------- */
 
 function pickerData_() {
+  if (MEMO_.pickers) return MEMO_.pickers;
   const v = pickers_().getDataRange().getValues();
   const byUid = {}, byNo = {}, list = [];
   for (let i = 1; i < v.length; i++) {
@@ -131,7 +138,7 @@ function pickerData_() {
     byNo[no] = p;
     if (p.uid) byUid[p.uid] = p;
   }
-  return { byUid: byUid, byNo: byNo, list: list };
+  return MEMO_.pickers = { byUid: byUid, byNo: byNo, list: list };
 }
 
 /* ---------------- reading taps fast ---------------- */
@@ -229,8 +236,12 @@ function ingestScans_(scans, device, team) {
     let minDate = today;
     scans.forEach(s => { if (s && s.t) { const d = day_(new Date(Number(s.t))); if (d < minDate) minDate = d; } });
     // read only from the first row of the oldest day in this batch (yesterday at most in practice)
-    const from = firstRowFor_(minDate) || firstRowFor_(today);
+    let from = firstRowFor_(minDate) || firstRowFor_(today);
     const sh = taps_();
+    const oldest = scans.reduce((m, s) => Math.min(m, Number(s && s.t) || Infinity), Infinity);
+    if (minDate === today && from && now.getTime() - oldest < 3 * 3600000) {
+      from = Math.max(from, sh.getLastRow() - 2500);        // ~1 hour of a peak day is enough for the checks
+    }
     const seen = {}, lastOk = {};
     if (from) {
       const last = sh.getLastRow();
@@ -350,6 +361,7 @@ function registerPicker(uid, no, name, type, replace) {
   const lock = LockService.getScriptLock();
   lock.waitLock(15000);
   try {
+    MEMO_.pickers = null;
     const pd = pickerData_();
     const sh = pickers_();
     if (pd.byUid[uid]) {
@@ -378,6 +390,7 @@ function registerPicker(uid, no, name, type, replace) {
     sh.getRange(row, 1, 1, PICKER_HEADERS.length).setValues([[no, name, uid, 'YES', new Date(), type === 'Contract' ? 'Contract' : 'Day', '']]);
     return { no: no, name: name, uid: uid, type: type === 'Contract' ? 'Contract' : 'Day', active: true };
   } finally {
+    MEMO_.pickers = null;
     lock.releaseLock();
   }
 }
@@ -396,6 +409,7 @@ function saveBins(date, team, exportBins, juiceBins) {
   if (BIN_TEAMS.indexOf(team) < 0) throw new Error('Pick a team.');
   const e = Math.max(0, Math.round(num_(exportBins) || 0));
   const j = Math.max(0, Math.round(num_(juiceBins) || 0));
+  clearDashCache_(date);
   const bags = tapsForDate_(date).filter(t => t.status === 'OK' && (team === 'All teams' || t.team === team))
     .reduce((s, t) => s + t.bags, 0);
   const sh = bins_();
@@ -429,6 +443,7 @@ function saveBackfill(date, team, block, text) {
   });
   if (problems.length) throw new Error(problems.join('\n'));
   if (!rows.length) throw new Error('Nothing to save.');
+  clearDashCache_(date);
   const already = tapsForDate_(date).filter(t => t.method === 'PAPER').length;
   appendTaps_(rows);
   return { saved: rows.length, bags: rows.reduce((s, r) => s + r[13], 0), alreadyHadPaper: already };
@@ -471,6 +486,15 @@ function calibration_(beforeDate, actuals) {
 }
 
 function dashboardData(dateStr, rankBy) {
+  const key = 'dash:' + (dateStr || '') + ':' + (rankBy || '');
+  const cache = CacheService.getScriptCache();
+  const hit = cache.get(key);
+  if (hit) return JSON.parse(hit);
+  const out = dashboardData_(dateStr, rankBy);
+  try { cache.put(key, JSON.stringify(out), out.isToday ? 45 : 300); } catch (e) {}
+  return out;
+}
+function dashboardData_(dateStr, rankBy) {
   const now = new Date();
   const today = day_(now);
   const date = /^\d{4}-\d{2}-\d{2}$/.test(dateStr || '') ? dateStr : today;
@@ -575,6 +599,12 @@ function perPicker_(date, okTaps, pd) {
   }).sort((a, b) => b.bags - a.bags || a.name.localeCompare(b.name));
 }
 
+function clearDashCache_(date) {
+  const today = day_(new Date());
+  const keys = [];
+  [date, date === today ? '' : null].forEach(d => { if (d !== null) ['hour', 'bags', ''].forEach(r => keys.push('dash:' + d + ':' + r)); });
+  try { CacheService.getScriptCache().removeAll(keys); } catch (e) {}
+}
 function round1_(x) { return Math.round(x * 10) / 10; }
 
 // The "Details" page: every picker, pairs, last 7 days, blocks, hours. Read on demand only.
@@ -621,6 +651,7 @@ function demoPickers_(n) {
     if (!pd.byNo[no]) add.push([no, p.name, p.uid, 'YES', new Date(), i % 3 === 0 ? 'Contract' : 'Day', '']);
   }
   if (add.length) { const sh = pickers_(); sh.getRange(sh.getLastRow() + 1, 1, add.length, PICKER_HEADERS.length).setValues(add); }
+  MEMO_.pickers = null;
   return out;
 }
 
@@ -665,17 +696,24 @@ function loadTest() {
   scans.sort((a, b) => a.t - b.t);
   const times = [];
   const t0 = Date.now();
-  TEAMS.forEach(tm => {
-    const mine = scans.filter(s => s.team === tm);
-    for (let i = 0; i < mine.length; i += 100) {
+  // the two phones send in turn, oldest scans first, the way the batches arrive on a real day
+  const byTeam = TEAMS.map(tm => scans.filter(s => s.team === tm));
+  let lastBatch = null, lastTeam = TEAMS[0];
+  for (let i = 0; byTeam.some(l => i < l.length); i += 100) {
+    TEAMS.forEach((tm, k) => {
+      const batch = byTeam[k].slice(i, i + 100);
+      if (!batch.length) return;
       const b = Date.now();
-      ingestScans_(mine.slice(i, i + 100), 'loadtest', tm);
+      ingestScans_(batch, 'loadtest', tm);
       times.push(Date.now() - b);
-    }
-  });
+      lastBatch = batch; lastTeam = tm;
+    });
+  }
   const ingestTotal = Date.now() - t0;
-  const d0 = Date.now(); const d = dashboardData(today, 'hour'); const dashMs = Date.now() - d0;
-  const s0 = Date.now(); ingestScans_(scans.slice(-100), 'loadtest-resend', TEAMS[0]); const resendMs = Date.now() - s0;
+  const d0 = Date.now(); const d = dashboardData_(today, 'hour'); const dashMs = Date.now() - d0;
+  const before = taps_().getLastRow();
+  const s0 = Date.now(); ingestScans_(lastBatch, 'loadtest-resend', lastTeam); const resendMs = Date.now() - s0;
+  if (taps_().getLastRow() !== before) Logger.log('WARNING: resent batch was stored twice');
   const sh = sheet_('Load test', ['Run at', 'Scans', 'Batches', 'Avg batch ms', 'Slowest batch ms', 'All batches s', 'Dashboard ms', 'Resend 100 ms', 'Bags on dashboard', 'Taps rows']);
   const avg = Math.round(times.reduce((a, b) => a + b, 0) / times.length);
   sh.appendRow([new Date(), scans.length, times.length, avg, Math.max.apply(null, times), Math.round(ingestTotal / 1000), dashMs, resendMs, d.bags, taps_().getLastRow() - 1]);
@@ -690,4 +728,6 @@ function clearDemo() {
     sh.getRange(1, 1, keep.length, keep[0].length).setValues(keep);
   });
   resetIdx_();
+  MEMO_ = {};
+  clearDashCache_(day_(new Date()));
 }
