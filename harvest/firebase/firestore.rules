@@ -1,0 +1,72 @@
+rules_version = '2';
+// Harvest Tracker access rules.
+// Roles live in users/{uid}.role: admin | office | scanner | pending | disabled.
+//   admin, office: everything (Wian, Fanus, Adolf).
+//   scanner: the FORT 1 phones. Can count bags and link bands; cannot see pay, loans or the change log.
+// Only wian@kettel.co.za can make himself admin on first sign-in; after that the admin assigns roles in Settings.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function userDoc() { return /databases/$(database)/documents/users/$(request.auth.uid); }
+    function role() { return signedIn() && exists(userDoc()) ? get(userDoc()).data.role : 'none'; }
+    function admin() { return role() == 'admin'; }
+    function office() { return role() in ['admin', 'office']; }
+    function scanner() { return role() == 'scanner'; }
+    function staff() { return office() || scanner(); }
+    function onlyKeys(keys) {
+      return resource == null
+        ? request.resource.data.keys().hasOnly(keys)
+        : request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+    function weekPaid(week) { return exists(/databases/$(database)/documents/paidWeeks/$(week)); }
+
+    match /users/{uid} {
+      allow read: if signedIn() && (request.auth.uid == uid || admin());
+      allow create: if signedIn() && request.auth.uid == uid
+        && (request.resource.data.role == 'pending'
+            || (request.resource.data.role == 'admin' && request.auth.token.email == 'wian@kettel.co.za'));
+      allow update, delete: if admin();
+    }
+
+    match /settings/{id}  { allow read: if staff(); allow write: if office(); }
+    match /blocks/{id}    { allow read: if staff(); allow write: if office(); }
+    match /bloom/{id}     { allow read, write: if office(); }
+
+    match /workers/{id} {
+      allow read: if staff();
+      allow create, delete: if office();
+      allow update: if office() || (scanner() && onlyKeys(['uid', 'oldUids']));
+    }
+
+    // block per team per day
+    match /teamDays/{id} { allow read, write: if staff(); }
+
+    // bags per picker per day (counters). Phones may only touch the counting fields.
+    match /pickerDays/{id} {
+      allow read: if staff();
+      allow create, update: if office()
+        || (scanner() && onlyKeys(['date', 'workerId', 'team', 'block', 'bags', 'manual', 'first', 'last', 'h']));
+      allow delete: if office();
+    }
+
+    // every single tap, kept as the raw record. Never changed or deleted from the app.
+    match /scans/{id}    { allow create: if staff(); allow read: if office(); }
+    match /dayFlags/{id} { allow read: if office(); allow write: if staff(); }
+
+    match /bins/{id}       { allow read, write: if office(); }
+    match /attendance/{id} { allow read, write: if office(); }
+    match /paidWeeks/{id}  { allow read, write: if office(); }
+
+    match /loans/{id} {
+      allow read: if office();
+      allow create, update: if office() && !weekPaid(request.resource.data.week);
+      allow delete: if office() && !weekPaid(resource.data.week);
+    }
+
+    match /audit/{id} {
+      allow read: if office();
+      allow create: if staff();
+    }
+  }
+}

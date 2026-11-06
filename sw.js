@@ -1,10 +1,10 @@
 // Keeps the scanning screen working with no signal: serves the app files from the phone's cache.
 // Scans themselves are stored by the page and sent to the Google Sheet when signal returns.
-const CACHE = 'pluk-v4';
+const CACHE = 'pluk-v5';
 const FILES = ['./', 'index.html', 'test.html', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });
 self.addEventListener('activate', e => {
-  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k !== CACHE).map(k => caches.delete(k)))));
+  e.waitUntil(caches.keys().then(ks => Promise.all(ks.filter(k => k.indexOf('pluk-') === 0 && k !== CACHE).map(k => caches.delete(k)))));
   self.clients.claim();
 });
 self.addEventListener('fetch', e => {

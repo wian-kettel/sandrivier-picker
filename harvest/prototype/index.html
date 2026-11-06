@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#1f3d2b">
+<title>Harvest Tracker</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="../../icon-192.png">
+<script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
+<style>
+:root{
+  --bg:#f5f3ee; --card:#ffffff; --ink:#1c2420; --mute:#6b736d; --line:#e3e0d8; --soft:#efece4;
+  --green:#2f6b45; --green-d:#1f3d2b; --green-s:#e5efe7; --amber:#b7791f; --amber-s:#fbf1df;
+  --red:#b42318; --red-s:#fbe9e7; --blue:#2c5d8a; --blue-s:#e6eef6; --pear:#c9b23a;
+  --r:14px; --sh:0 1px 2px rgba(28,36,32,.06),0 2px 10px rgba(28,36,32,.04);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+button,input,select,textarea{font:inherit;color:inherit}
+h1,h2,h3{margin:0;line-height:1.2}
+h2{font-size:19px} h3{font-size:15px}
+a{color:var(--green)}
+.num{font-variant-numeric:tabular-nums}
+.mute{color:var(--mute)} .small{font-size:13px} .tiny{font-size:12px}
+.hide{display:none!important}
+
+/* top bar */
+.top{position:sticky;top:0;z-index:20;background:var(--green-d);color:#fff;padding:10px 16px calc(0px);}
+.top-row{display:flex;align-items:center;gap:10px;max-width:1180px;margin:0 auto}
+.brand{font-weight:750;font-size:17px;letter-spacing:.01em;display:flex;align-items:center;gap:8px}
+.brand i{width:22px;height:22px;border-radius:50% 50% 50% 0;background:var(--pear);transform:rotate(-45deg);display:inline-block}
+.grow{flex:1}
+.pill{font-size:12px;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.14);white-space:nowrap}
+.pill.demo{background:var(--pear);color:#2b2608;font-weight:700}
+.user{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:4px 11px;font-size:13px;cursor:pointer}
+.tabs{display:flex;gap:4px;overflow-x:auto;max-width:1180px;margin:8px auto 0;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tab{background:none;border:0;color:rgba(255,255,255,.72);padding:9px 12px 11px;font-weight:600;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap;cursor:pointer}
+.tab.on{color:#fff;border-bottom-color:var(--pear)}
+
+main{max-width:1180px;margin:0 auto;padding:16px 16px 80px}
+.bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.bar h2{margin-right:auto}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);padding:16px;margin-bottom:14px}
+.card h3{margin-bottom:10px}
+.grid{display:grid;gap:14px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.g4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
+
+.kpi .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:650}
+.kpi .val{font-size:34px;font-weight:780;line-height:1.1;margin-top:4px}
+.kpi .sub{font-size:13px;color:var(--mute);margin-top:2px}
+.hero{background:var(--green-d);color:#fff;border:0}
+.hero .lbl,.hero .sub{color:rgba(255,255,255,.75)}
+.hero .val{font-size:44px}
+
+.team-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
+.team-head h3{margin:0}
+.tag{display:inline-block;font-size:12px;font-weight:650;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--ink)}
+.tag.g{background:var(--green-s);color:var(--green)} .tag.a{background:var(--amber-s);color:var(--amber)} .tag.r{background:var(--red-s);color:var(--red)} .tag.b{background:var(--blue-s);color:var(--blue)}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.stat{background:var(--soft);border-radius:10px;padding:8px 10px}
+.stat b{display:block;font-size:22px;line-height:1.15}
+.stat span{font-size:12px;color:var(--mute)}
+
+table{width:100%;border-collapse:collapse}
+th,td{padding:8px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:650;background:var(--card);position:sticky;top:0}
+td.r,th.r{text-align:right}
+tr.tot td{font-weight:750;border-top:2px solid var(--ink);border-bottom:0}
+tbody tr:hover{background:#faf9f5}
+.tw{overflow-x:auto;margin:0 -16px;padding:0 16px}
+.click{cursor:pointer}
+
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:620;cursor:pointer}
+.btn.p{background:var(--green);border-color:var(--green);color:#fff}
+.btn.w{background:var(--amber-s);border-color:#efd9ae;color:#7a4e0e}
+.btn.d{color:var(--red)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn.sm{padding:5px 10px;font-size:13px}
+.seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font-weight:620;font-size:13px;cursor:pointer;color:var(--mute)}
+.seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
+input[type=text],input[type=number],input[type=date],input[type=time],input[type=search],select,textarea{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;width:100%}
+input.cell{width:84px;padding:6px 8px;text-align:right}
+label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10px 0 4px}
+.fr{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 12px}
+.check{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800;color:#fff}
+.check.on{background:var(--green);border-color:var(--green)}
+.note{background:var(--amber-s);border:1px solid #efd9ae;color:#6b4510;border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:14px}
+.note.b{background:var(--blue-s);border-color:#c8d9ea;color:#1d3f5f}
+.empty{padding:22px;text-align:center;color:var(--mute)}
+.list-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line)}
+.list-row:last-child{border-bottom:0}
+.rank{width:26px;height:26px;border-radius:50%;background:var(--soft);display:inline-flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex:none}
+.barw{flex:1;height:8px;background:var(--soft);border-radius:4px;overflow:hidden}
+.barw i{display:block;height:100%;background:var(--green)}
+
+/* chart */
+.chart svg{width:100%;height:auto;display:block;max-width:820px}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--mute);margin-top:6px}
+.legend i{display:inline-block;width:12px;height:3px;border-radius:2px;margin-right:6px;vertical-align:middle}
+
+/* modal */
+.mb{position:fixed;inset:0;background:rgba(20,26,22,.45);display:none;align-items:flex-end;justify-content:center;z-index:50}
+.mb.on{display:flex}
+.modal{background:var(--card);width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:18px 18px 0 0;padding:18px 18px 24px}
+@media (min-width:700px){.mb{align-items:center}.modal{border-radius:18px}}
+.modal .acts{display:flex;gap:8px;justify-content:flex-end;margin-top:16px;flex-wrap:wrap}
+.toast{position:fixed;left:50%;bottom:22px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:12px;z-index:90;font-size:14px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+
+/* sign in */
+#gate{position:fixed;inset:0;background:var(--green-d);color:#fff;z-index:100;display:flex;align-items:center;justify-content:center;padding:20px}
+#gate .box{max-width:420px;width:100%}
+#gate h1{font-size:28px;display:flex;align-items:center;gap:10px}
+#gate .who{display:grid;gap:10px;margin-top:22px}
+#gate button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:14px;padding:14px 16px;text-align:left;font-size:16px;font-weight:650;cursor:pointer}
+#gate button span{display:block;font-size:13px;font-weight:400;opacity:.75}
+
+/* scanner (dark, high contrast, big) */
+#scan{position:fixed;inset:0;z-index:60;background:#0f172a;color:#f8fafc;display:none;flex-direction:column}
+#scan.on{display:flex}
+#scan .stop{display:flex;align-items:center;gap:8px;padding:10px 12px;background:#1e293b;font-size:15px;flex-wrap:wrap}
+#scan .chip{padding:5px 10px;border-radius:12px;background:#0f172a;color:#cbd5e1;font-size:14px}
+#scan .chip.good{color:#4ade80}
+#scan #sp{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:16px;transition:background .15s}
+#scan .l1{font-size:20px;letter-spacing:.06em;opacity:.9}
+#scan .l2{font-size:38px;font-weight:800;margin-top:10px;line-height:1.1}
+#scan .l3{font-size:96px;font-weight:900;line-height:1;margin:8px 0}
+#scan .l4{font-size:19px;opacity:.9}
+#scan .sbar{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;padding:10px 12px;background:#1e293b}
+#scan .sbar button,#scan .big{font-size:18px;padding:16px 10px;border:0;border-radius:10px;background:#334155;color:#f8fafc;font-weight:650;cursor:pointer}
+#scan .big{background:#15803d;font-size:26px;padding:22px 40px;margin-top:20px}
+#scan .demo-tap{margin-top:14px;background:#475569;font-size:15px;padding:10px 16px;border-radius:10px;border:0;color:#fff;cursor:pointer}
+.sov{position:fixed;inset:0;background:rgba(2,6,23,.95);z-index:70;display:none;flex-direction:column;padding:20px;overflow:auto;color:#f8fafc}
+.sov.on{display:flex}
+.sov h2{margin-bottom:12px;font-size:22px}
+.sov label{display:block;margin:12px 0 4px;color:#94a3b8;font-size:15px}
+.sov select,.sov input{width:100%;font-size:20px;padding:12px;border-radius:8px;border:1px solid #334155;background:#1e293b;color:#f8fafc}
+.sov .row{display:flex;gap:8px;margin-top:16px}.sov .row button{flex:1;font-size:18px;padding:16px 10px;border:0;border-radius:10px;background:#334155;color:#f8fafc;font-weight:650}
+.sov .row button.p{background:#15803d}
+.keys{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.keys button{font-size:30px;padding:16px 0;border:0;border-radius:10px;background:#334155;color:#fff;font-weight:700}
+.kpd{font-size:48px;font-weight:800;text-align:center;min-height:60px;margin:6px 0}
+.smsg{margin-top:12px;min-height:24px;font-size:19px;text-align:center}
+.sov table td,.sov table th{border-color:#334155;color:#f8fafc;background:none}
+
+@media (max-width:640px){
+  main{padding:12px 12px 80px}
+  .card{padding:14px}
+  .tw{margin:0 -14px;padding:0 14px}
+  .kpi .val{font-size:28px} .hero .val{font-size:38px}
+  .hide-m{display:none}
+}
+@media print{.top,.no-print{display:none!important}main{padding:0}.card{box-shadow:none}}
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <div class="box">
+    <h1><span style="width:30px;height:30px;border-radius:50% 50% 50% 0;background:var(--pear);transform:rotate(-45deg);display:inline-block"></span>Harvest Tracker</h1>
+    <p style="opacity:.8;margin:8px 0 0">Sandrivier, Barrydale. Prototype with demo data: nothing here is real, and nothing leaves this device.</p>
+    <div class="who" id="who"></div>
+    <p class="small" style="opacity:.6;margin-top:18px">The real app will use a proper login (email and password). In the prototype you just pick who you are.</p>
+  </div>
+</div>
+
+<div class="top">
+  <div class="top-row">
+    <div class="brand"><i></i>Harvest Tracker</div>
+    <span class="pill demo">DEMO</span>
+    <span class="pill hide-m" id="clockPill"></span>
+    <span class="grow"></span>
+    <button class="user" id="userBtn"></button>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</div>
+<main id="view"></main>
+
+<div class="mb" id="mb"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<!-- ================= SCANNER (FORT 1) ================= -->
+<div id="scan">
+  <div class="stop">
+    <span class="chip" id="scTeam"></span>
+    <span class="chip" id="scBlock"></span>
+    <span style="flex:1"></span>
+    <span class="chip good" id="scSync">All saved</span>
+  </div>
+  <div id="sp">
+    <div class="l1" id="s1">SANDRIVIER</div>
+    <div class="l2" id="s2">Press START</div>
+    <div class="l3" id="s3"></div>
+    <div class="l4" id="s4"></div>
+    <button class="big" id="scStart">START</button>
+    <button class="demo-tap" id="scDemo">Demo: simulate a band tap</button>
+  </div>
+  <div class="sbar">
+    <button id="scManual">Type number</button>
+    <button id="scToday">Today</button>
+    <button id="scMenu">Menu</button>
+  </div>
+</div>
+<div class="sov" id="ovDay">
+  <h2>Start of day</h2>
+  <div id="dayInfo" style="color:#94a3b8"></div>
+  <label>Which block is your team picking today?</label>
+  <select id="dayBlock"></select>
+  <div class="row"><button class="p" id="dayOk">Start picking</button></div>
+</div>
+<div class="sov" id="ovKey">
+  <h2>Type the picker number</h2>
+  <div class="kpd" id="kpd"></div>
+  <div class="keys" id="keys"></div>
+  <div class="row"><button id="kDone">Done</button><button class="p" id="kOk">Count bag</button></div>
+  <div class="smsg" id="kMsg"></div>
+  <div style="text-align:center;color:#94a3b8;font-size:14px;margin-top:4px">Stays open so you can type bag after bag. Press Done when finished.</div>
+</div>
+<div class="sov" id="ovLink">
+  <h2>Band not linked</h2>
+  <div id="lUid" style="color:#94a3b8"></div>
+  <label>Picker number to link this band to</label>
+  <input id="lNo" inputmode="numeric" autocomplete="off">
+  <div class="smsg" id="lMsg"></div>
+  <div class="row"><button id="lCancel">Cancel</button><button class="p" id="lOk">Link band</button></div>
+  <div class="row"><button id="lReplace" class="hide" style="background:#b45309">Yes, replace the old band</button></div>
+</div>
+<div class="sov" id="ovSToday">
+  <h2>Today, your team</h2>
+  <div id="stBody"></div>
+  <div class="row"><button class="p" id="stClose">Close</button></div>
+</div>
+<div class="sov" id="ovSMenu">
+  <h2>Menu</h2>
+  <div id="smInfo" style="color:#94a3b8;line-height:1.6"></div>
+  <div class="row"><button id="smBlock">Change block</button></div>
+  <div class="row"><button id="smOut">Sign out</button></div>
+  <div class="row"><button class="p" id="smClose">Close</button></div>
+</div>
+
+<script>
+/* =====================================================================
+   Harvest Tracker prototype
+   - Store: the ONLY place that saves or loads. Prototype = this browser.
+     For the real app this one object is replaced by a Firebase version;
+     the screens below do not change.
+   ===================================================================== */
+(function(){
+'use strict';
+var APP_VERSION = '0.1 prototype';
+var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
+
+var VARIETIES = [
+  {code:'EBC', name:'Early Bon Chrétien'},
+  {code:'PTR', name:"Packham's Triumph"},
+  {code:'FRL', name:'Forelle'},
+  {code:'RSM', name:'Rosemarie (pollinator)'},
+  {code:'CLP', name:"Clapp's Favourite (pollinator)"}
+];
+function vName(c){ for (var i=0;i<VARIETIES.length;i++) if (VARIETIES[i].code===c) return VARIETIES[i].name; return c||''; }
+function vShort(c){ return {EBC:'Bon Chrétien',PTR:"Packham's",FRL:'Forelle',RSM:'Rosemarie',CLP:"Clapp's"}[c] || c; }
+
+/* ---------------- small helpers ---------------- */
+var $ = function(id){ return document.getElementById(id); };
+function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];}); }
+function pad(n){ return (n<10?'0':'')+n; }
+function ymd(d){ return d.getFullYear()+'-'+pad(d.getMonth()+1)+'-'+pad(d.getDate()); }
+function parseYmd(s){ var p=s.split('-'); return new Date(+p[0],+p[1]-1,+p[2]); }
+function addDays(s,n){ var d=parseYmd(s); d.setDate(d.getDate()+n); return ymd(d); }
+function hm(t){ var d=new Date(t); return pad(d.getHours())+':'+pad(d.getMinutes()); }
+function minOf(t){ var d=new Date(t); return d.getHours()*60+d.getMinutes()+d.getSeconds()/60; }
+function hmToMin(s){ var p=String(s).split(':'); return (+p[0])*60+(+p[1]); }
+function minToHm(m){ m=Math.round(m); return pad(Math.floor(m/60))+':'+pad(m%60); }
+var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function nice(s){ var d=parseYmd(s); return DOW[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()]; }
+function niceShort(s){ var d=parseYmd(s); return d.getDate()+' '+MON[d.getMonth()]; }
+function R(n){ return 'R'+(Math.round(n*100)/100).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2}); }
+function fmt(n,dp){ return (dp? (Math.round(n*Math.pow(10,dp))/Math.pow(10,dp)).toFixed(dp) : Math.round(n)).toLocaleString('en-ZA'); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+function normUid(s){ var h=String(s||'').toUpperCase().replace(/[^0-9A-F]/g,''); return h.length<4?'':h.match(/.{1,2}/g).join(':'); }
+function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove('on');},2200); }
+
+/* ---------------- demo clock ----------------
+   Outside picking hours (or on a Sunday) the prototype pins the clock at
+   11:30 so the live screens have something to show. */
+var CLOCK = { pinned:null };
+function NOW(){
+  if (CLOCK.pinned==null) return new Date();
+  var d=new Date(); d.setHours(Math.floor(CLOCK.pinned/60), CLOCK.pinned%60, 0, 0); return d;
+}
+function TODAY(){ return ymd(NOW()); }
+function setClock(){
+  var d=new Date(), m=d.getHours()*60+d.getMinutes();
+  CLOCK.pinned = (d.getDay()===0 || m<7*60+30 || m>17*60) ? 11*60+30 : null;
+}
+
+/* =====================================================================
+   STORE (prototype version: localStorage)
+   ===================================================================== */
+var Store = (function(){
+  var KEY='harvest-proto-v1', db=null, saveT=null, listeners=[];
+  var COLS=['workers','blocks','bloom','teamDays','scans','pickerDays','bins','loans','attendance','paidWeeks','audit','meta'];
+  function blank(){ var o={settings:null}; COLS.forEach(function(c){ o[c]={}; }); return o; }
+  function load(){ try{ var s=localStorage.getItem(KEY); db=s?JSON.parse(s):null; }catch(e){ db=null; } return !!db; }
+  function persist(){ clearTimeout(saveT); saveT=setTimeout(function(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast('Could not save on this device (storage full?)'); } },150); }
+  function changed(col){ persist(); listeners.forEach(function(f){ f(col); }); }
+  return {
+    init:function(){ return load(); },
+    reset:function(){ db=blank(); },
+    flush:function(){ clearTimeout(saveT); try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} },
+    wipe:function(){ try{ localStorage.removeItem(KEY); }catch(e){} db=null; },
+    settings:function(){ return db.settings; },
+    setSettings:function(s,who,what,quiet){ db.settings=s; if(what) this.log(who,what); if (quiet) persist(); else changed('settings'); },
+    all:function(col){ var o=db[col], a=[]; for (var k in o) a.push(o[k]); return a; },
+    get:function(col,id){ return db[col][id]||null; },
+    put:function(col,obj,quiet){ db[col][obj.id]=obj; if(!quiet) changed(col); else persist(); return obj; },
+    del:function(col,id){ delete db[col][id]; changed(col); },
+    where:function(col,fn){ return this.all(col).filter(fn); },
+    log:function(who,what){ var e={id:uid(),t:Date.now(),who:who,what:what}; db.audit[e.id]=e; persist(); },
+    onChange:function(f){ listeners.push(f); },
+    sizeKb:function(){ try{ return Math.round(JSON.stringify(db).length/1024); }catch(e){ return 0; } }
+  };
+})();
+
+/* =====================================================================
+   Business rules (shared by every screen)
+   ===================================================================== */
+function S(){ return Store.settings(); }
+function teamName(id){ var t=S().teams.filter(function(x){return x.id===id;})[0]; return t?t.name:id; }
+function worker(id){ return Store.get('workers',id); }
+function wName(w){ return w ? (w.first+' '+w.last).trim() : '?'; }
+function blockById(id){ return Store.get('blocks',id); }
+
+// picking minutes between two clock minutes, counting only the picking sessions
+function sessions(){ return S().sessions.map(function(s){ return [hmToMin(s[0]),hmToMin(s[1])]; }); }
+function pickMin(a,b){ var t=0; sessions().forEach(function(s){ var lo=Math.max(a,s[0]), hi=Math.min(b,s[1]); if (hi>lo) t+=hi-lo; }); return t; }
+function dayEnd(){ var s=sessions(); return s[s.length-1][1]; }
+function inSession(m){ return sessions().some(function(s){ return m>=s[0] && m<s[1]; }); }
+
+// week runs Friday to Thursday; paid in cash on Friday after the week
+function weekStart(dateStr){ var d=parseYmd(dateStr), back=(d.getDay()-5+7)%7; d.setDate(d.getDate()-back); return ymd(d); }
+function weekDays(ws){ var a=[]; for (var i=0;i<7;i++) a.push(addDays(ws,i)); return a; }
+function payday(ws){ return addDays(ws,7); }
+
+function bagsOf(pd){ return pd ? (pd.bags||0)+(pd.adj||0) : 0; }
+function pdFor(date,wid){ return Store.get('pickerDays', date+'|'+wid); }
+
+// estimate for one team on one date
+function teamEstimate(date, team){
+  var st=S(), td=Store.get('teamDays', date+'|'+team);
+  var pds=Store.where('pickerDays',function(p){ return p.date===date && p.team===team; });
+  var bags=pds.reduce(function(a,p){ return a+bagsOf(p); },0);
+  var pickers=pds.filter(function(p){ return bagsOf(p)>0; }).length;
+  var first=null;
+  pds.forEach(function(p){ if (p.first && (first===null || p.first<first)) first=p.first; });
+  var isToday = date===TODAY();
+  var nowM = isToday ? minOf(NOW()) : dayEnd();
+  var startM = first!=null ? minOf(first) : null;
+  var e={ team:team, date:date, bags:bags, pickers:pickers, block: td?td.block:null, startM:startM, isToday:isToday };
+  e.variety = e.block && blockById(e.block) ? blockById(e.block).variety : null;
+  e.binsSoFar = bags/st.bagsPerBin;
+  if (startM==null){ e.state='none'; return e; }
+  var elapsed = pickMin(startM, nowM);
+  var remaining = isToday ? pickMin(Math.max(nowM,startM), dayEnd()) : 0;
+  e.elapsed=elapsed; e.remaining=remaining;
+  e.ratePerHour = elapsed>0 ? bags/elapsed*60 : 0;
+  e.perPickerHour = pickers ? e.ratePerHour/pickers : 0;
+  if (isToday && elapsed<20){ e.state='early'; return e; }
+  e.state = isToday && remaining>0 ? 'live' : 'done';
+  e.endBags = bags + (elapsed>0 ? bags/elapsed*remaining : 0);
+  e.endBins = e.endBags/st.bagsPerBin;
+  return e;
+}
+
+/* =====================================================================
+   Seed: real farm reference data + demo pickers and scans
+   ===================================================================== */
+var FIRST=['Sipho','Thandiwe','Johannes','Elna','Andile','Petrus','Nomsa','Jacobus','Lindiwe','Willem','Zanele','Hendrik','Anele','Magdalena','Bongani','Christo','Ayanda','Riaan','Nandi','Frans','Lerato','Koos','Busisiwe','Gert','Precious','Dawid','Sizwe','Annatjie','Themba','Sarel','Mpho','Elsabe','Vusi','Marthinus','Nosipho','Jan','Khanyisa','Piet','Unathi','Hennie','Lwazi','Sannie','Kagiso','Danie','Yonela','Barend','Thabo','Ria','Siyabonga','Klaas','Ntombi','Stefan','Odwa','Lettie','Mandla','Gerrit'];
+var LAST=['Adams','Jacobs','Mokoena','Pietersen','Daniels','Ndlovu','Fortuin','Booysen','Khumalo','Hendricks','Afrika','Mthembu','Plaatjies','Swartz','Dlamini','Cupido','Malgas','Nkosi','Arendse','Februarie','Mentoor','Zulu','Stuurman','Koopman','Sithole','Abrahams','Lottering','Baartman','Tshabalala','Isaacs'];
+
+function seed(){
+  Store.reset();
+  setClock();
+  var today=TODAY();
+  Store.setSettings({
+    farm:'Sandrivier', ratePerBag:2.00, bagsPerBin:45, repeatMin:2,
+    sessions:[['06:30','08:00'],['09:00','12:00'],['13:00','17:00']],
+    teams:[{id:'T1',name:'Team 1'},{id:'T2',name:'Team 2'}],
+    season:'2027', seasonLabel:'2026/27'
+  },null,null,true);
+  // blocks (Block Master v0.2, aggregated 1 to 8 as Fanus now reports them)
+  [
+    {id:'1',name:'Blok 1',variety:'PTR',planted:'2012',trees:3068,ha:2.0,rows:'',spacing:'4.8 x 1.5 m',soil:'Shaley',ridged:'No',notes:'Extra trees vs Blok 2'},
+    {id:'2',name:'Blok 2',variety:'PTR',planted:'2013',trees:2891,ha:2.0,rows:'',spacing:'4.8 x 1.5 m',soil:'Sandy',ridged:'No',notes:''},
+    {id:'3',name:'Blok 3',variety:'EBC',planted:'2013/2015',trees:2902,ha:2.0,rows:'',spacing:'4.8 x 1.5 m',soil:'Sandy',ridged:'No',notes:'Was 3A + 3B'},
+    {id:'4',name:'Blok 4',variety:'PTR',planted:'2014',trees:2969,ha:2.0,rows:'',spacing:'4.8 x 1.5 m',soil:'Shaley',ridged:'No',notes:''},
+    {id:'5',name:'Blok 5',variety:'PTR',planted:'2017',trees:2982,ha:2.0,rows:'',spacing:'4.8 x 1.5 m',soil:'Shaley',ridged:'5A yes, 5B no',notes:'Was 5A + 5B'},
+    {id:'6',name:'Blok 6',variety:'EBC',planted:'2018',trees:3000,ha:2.0,rows:'',spacing:'4.5 x 1.5 m',soil:'Shaley',ridged:'Yes',notes:''},
+    {id:'7',name:'Blok 7',variety:'FRL',planted:'2018',trees:3280,ha:2.0,rows:'',spacing:'4.5 x 1.5 m',soil:'Shaley',ridged:'Yes',notes:''},
+    {id:'8',name:'Blok 8',variety:'FRL',planted:'2019/2020',trees:4478,ha:3.0,rows:'',spacing:'4.5 x 1.5 m',soil:'Shaley',ridged:'Yes',notes:'Was 8A + 8B'}
+  ].forEach(function(b){ Store.put('blocks',b,true); });
+  // full bloom dates (Fanus's Volblomdatums sheets)
+  var bloom={2020:{3:'09-18',6:'09-18',P:'10-12'},2021:{3:'09-22',6:'09-27',P:'10-14'},2022:{3:'09-23',6:'09-23',P:'10-12'},
+    2023:{3:'09-08',6:'09-06',7:'09-14',8:'09-14',P:'09-29'},2024:{3:'09-23',6:'09-25',7:'09-30',8:'09-30',P:'10-08'},
+    2025:{3:'09-08',6:'09-08',7:'09-12',8:'09-12',P:'09-29'},2026:{3:'09-04',6:'09-04',7:'09-10',8:'09-10',P:'09-23'}};
+  Object.keys(bloom).forEach(function(y){ var r=bloom[y];
+    ['1','2','3','4','5','6','7','8'].forEach(function(b){ var v=r[b] || ((b==='1'||b==='2'||b==='4'||b==='5')?r.P:null);
+      if (v) Store.put('bloom',{id:y+'|'+b,year:y,block:b,date:y+'-'+v},true); }); });
+  // workers: Team 1 = day workers, Team 2 = contract, plus sorters
+  var n=0;
+  function mk(no,role,pay,team){ var w={id:'w'+no,no:no,first:FIRST[n%FIRST.length],last:LAST[(n*7)%LAST.length],role:role,pay:pay,team:team,uid:'',oldUids:[],active:true}; n++;
+    w.uid = role==='picker' ? normUid('04'+(0x100000+no*7919).toString(16)+'A3'+pad(no%97)) : ''; Store.put('workers',w,true); return w; }
+  for (var i=1;i<=25;i++) mk(i,'picker','day','T1');
+  for (i=51;i<=75;i++) mk(i,'picker','contract','T2');
+  for (i=91;i<=94;i++) mk(i,'sorter','day','T1');
+  var pickers=Store.where('workers',function(w){return w.role==='picker';});
+  pickers.forEach(function(w,k){ w.speed = 120 + ((k*37)%90) + (w.pay==='contract'?20:0); });   // bags per full day
+  // demo season: picking started 10 working days ago (Mon to Sat), all EBC so far
+  var days=[], d=today, guard=0;
+  while (days.length<10 && guard<30){ d=addDays(d,-1); guard++; if (parseYmd(d).getDay()!==0) days.unshift(d); }
+  var all=days.concat([today]);
+  all.forEach(function(date,di){
+    var isToday = date===today;
+    var b1 = di<6 ? '3' : '6', b2 = di<4 ? '6' : '3';
+    [['T1',b1],['T2',b2]].forEach(function(tb){ Store.put('teamDays',{id:date+'|'+tb[0],date:date,team:tb[0],block:tb[1]},true); });
+    var nowM = isToday ? minOf(NOW()) : dayEnd();
+    var dayBags=0;
+    pickers.forEach(function(w,k){
+      var rnd = 0.8 + ((k*13+di*17)%40)/100;                 // 0.80 to 1.19
+      if (!isToday && (k+di)%23===0) return;                  // someone absent
+      var perMin = w.speed*rnd/510;
+      var td=Store.get('teamDays',date+'|'+w.team);
+      var pd={id:date+'|'+w.id,date:date,workerId:w.id,team:w.team,block:td.block,bags:0,manual:0,adj:0,first:null,last:null};
+      var start = hmToMin('06:30') + ((k*3)%12), acc=((k*0.37)%1), base=parseYmd(date).getTime();
+      for (var m=start; m<nowM; m+=1){
+        if (!inSession(m)) continue;
+        acc += perMin;
+        if (acc>=1){ acc-=1;
+          var t = base + m*60000 + ((k*7+m)%50)*1000, manual = ((k+m)%97===0);
+          pd.bags++; if (manual) pd.manual++;
+          if (pd.first===null) pd.first=t; pd.last=t;
+          if (isToday){ var sid=uid(); Store.put('scans',{id:sid,t:t,date:date,team:w.team,workerId:w.id,method:manual?'MANUAL':'NFC',status:'OK',device:w.team==='T1'?'FORT 1 A':'FORT 1 B'},true);
+            if ((k*m)%211===0) Store.put('scans',{id:uid(),t:t+40000,date:date,team:w.team,workerId:w.id,method:'NFC',status:'DUP',device:'FORT 1'},true); }
+        }
+      }
+      if (pd.bags) Store.put('pickerDays',pd,true);
+      dayBags += pd.bags;
+    });
+    Store.where('workers',function(w){return w.role==='sorter';}).forEach(function(w,k){
+      if ((k+di)%9!==0) Store.put('attendance',{id:date+'|'+w.id,date:date,workerId:w.id,present:true},true); });
+    if (!isToday){
+      var tot = Math.round(dayBags/45*(0.96+((di*7)%9)/100)), exp = Math.round(tot*(0.52+((di*5)%11)/100));
+      Store.put('bins',{id:date+'|EBC',date:date,variety:'EBC',export:exp,juice:tot-exp,by:'Fanus',at:Date.now()},true);
+    }
+  });
+  // a couple of loans in the current and last week
+  var ws=weekStart(today), lw=addDays(ws,-7);
+  [[ws,'w3',150],[ws,'w11',200],[ws,'w19',100],[lw,'w3',100],[lw,'w7',250]].forEach(function(l){
+    Store.put('loans',{id:l[0]+'|'+l[1],week:l[0],workerId:l[1],amount:l[2],by:'Adolf'},true); });
+  Store.put('paidWeeks',{id:addDays(lw,-7),week:addDays(lw,-7),paidAt:Date.now(),by:'Adolf'},true);
+  Store.put('meta',{id:'seed',at:Date.now(),date:today},true);
+  Store.log('System','Demo data loaded');
+  Store.flush();
+}
+
+/* =====================================================================
+   Users (prototype sign in)
+   ===================================================================== */
+var USERS=[
+  {id:'fanus',name:'Fanus',role:'office',desc:'Farm manager. Everything.'},
+  {id:'adolf',name:'Adolf',role:'office',desc:'Owner. Everything, records loans.'},
+  {id:'wian',name:'Wian',role:'office',desc:'Admin. Everything plus settings.'},
+  {id:'tl1',name:'Team lead 1',role:'scanner',team:'T1',desc:'FORT 1 scanner, Team 1 only.'},
+  {id:'tl2',name:'Team lead 2',role:'scanner',team:'T2',desc:'FORT 1 scanner, Team 2 only.'}
+];
+var ME=null;
+function signIn(u){
+  ME=u; try{ sessionStorage.setItem('ht-user',u.id); }catch(e){}
+  $('gate').style.display='none';
+  if (u.role==='scanner'){ Scanner.open(); return; }
+  $('userBtn').textContent=u.name+' ▾';
+  route();
+}
+function signOut(){ ME=null; try{ sessionStorage.removeItem('ht-user'); }catch(e){} Scanner.close(); $('gate').style.display='flex'; }
+$('who').innerHTML = USERS.map(function(u,i){ return '<button data-i="'+i+'">'+esc(u.name)+'<span>'+esc(u.desc)+'</span></button>'; }).join('');
+$('who').onclick=function(e){ var b=e.target.closest('button'); if (b) signIn(USERS[+b.getAttribute('data-i')]); };
+$('userBtn').onclick=function(){
+  modal('<h2>'+esc(ME.name)+'</h2><p class="mute">Prototype, version '+APP_VERSION+'. Data is demo data stored on this device only ('+Store.sizeKb()+' KB).</p>'+
+    '<div class="acts"><button class="btn" data-a="scanner">Scanner screen, Team 1</button><button class="btn" data-a="scanner2">Scanner screen, Team 2</button><button class="btn" data-a="out">Sign out</button><button class="btn p" data-a="close">Close</button></div>',
+    { scanner:function(){ closeModal(); VIEW.scanTeam='T1'; Scanner.open(); }, scanner2:function(){ closeModal(); VIEW.scanTeam='T2'; Scanner.open(); }, out:function(){ closeModal(); signOut(); } });
+};
+
+/* ---------------- modal ---------------- */
+var modalActs={};
+function modal(html, acts){ $('modal').innerHTML=html; modalActs=acts||{}; $('mb').classList.add('on'); var f=$('modal').querySelector('input,select'); if (f) setTimeout(function(){ f.focus(); },50); }
+function closeModal(){ $('mb').classList.remove('on'); }
+$('mb').onclick=function(e){ if (e.target===$('mb')) closeModal(); };
+$('modal').onclick=function(e){ var b=e.target.closest('[data-a]'); if (!b) return; var a=b.getAttribute('data-a'); if (a==='close') return closeModal(); if (modalActs[a]) modalActs[a](b); };
+
+/* =====================================================================
+   Router + tabs
+   ===================================================================== */
+var TABS=[['today','Today'],['pickers','Pickers'],['bins','Bins'],['pay','Pay'],['season','Season'],['orchards','Orchards'],['settings','Settings']];
+var VIEW={};    // per-view state
+function go(t){ location.hash='#'+t; }
+function route(){
+  if (!ME || ME.role!=='office') return;
+  var t=(location.hash||'#today').slice(1).split('/')[0]; if (!VIEWS[t]) t='today';
+  $('tabs').innerHTML=TABS.map(function(x){ return '<button class="tab'+(x[0]===t?' on':'')+'" data-t="'+x[0]+'">'+x[1]+'</button>'; }).join('');
+  $('clockPill').textContent = CLOCK.pinned!=null ? 'Demo clock '+minToHm(CLOCK.pinned) : 'Live clock';
+  VIEWS[t]($('view'));
+  VIEW.current=t;
+}
+$('tabs').onclick=function(e){ var b=e.target.closest('[data-t]'); if (b) go(b.getAttribute('data-t')); };
+window.addEventListener('hashchange', route);
+function rerender(){ if (ME && ME.role==='office' && !$('mb').classList.contains('on')) route(); }
+
+/* ---------------- chart helpers ---------------- */
+function lineChart(series, opts){
+  // series: [{name,color,pts:[[x,y]...], dash}]
+  var W=640,H=240,L=40,Rr=12,T=10,B=28;
+  var xs=[],ys=[0]; series.forEach(function(s){ s.pts.forEach(function(p){ xs.push(p[0]); ys.push(p[1]); }); });
+  if (!xs.length) return '<div class="empty">No data yet.</div>';
+  var xmin=Math.min.apply(null,xs), xmax=Math.max.apply(null,xs); if (xmax===xmin) xmax=xmin+1;
+  var ymax=Math.max.apply(null,ys)*1.08||1;
+  var step=Math.pow(10,Math.floor(Math.log10(ymax))); var ticks=[]; var st=step*(ymax/step>5?2:ymax/step>2.5?1:0.5);
+  for (var v=0; v<=ymax; v+=st) ticks.push(v);
+  function X(x){ return L+(x-xmin)/(xmax-xmin)*(W-L-Rr); } function Y(y){ return T+(1-y/ymax)*(H-T-B); }
+  var g='<svg viewBox="0 0 '+W+' '+H+'" role="img">';
+  ticks.forEach(function(v){ g+='<line x1="'+L+'" x2="'+(W-Rr)+'" y1="'+Y(v)+'" y2="'+Y(v)+'" stroke="#e3e0d8"/><text x="'+(L-6)+'" y="'+(Y(v)+4)+'" font-size="13" fill="#6b736d" text-anchor="end">'+fmt(v)+'</text>'; });
+  var xt=opts&&opts.xticks||[]; xt.forEach(function(x){ g+='<text x="'+X(x[0])+'" y="'+(H-8)+'" font-size="13" fill="#6b736d" text-anchor="middle">'+esc(x[1])+'</text>'; });
+  series.forEach(function(s){ if (!s.pts.length) return;
+    g+='<polyline fill="none" stroke="'+s.color+'" stroke-width="'+(s.w||2.5)+'" stroke-linejoin="round" stroke-linecap="round"'+(s.dash?' stroke-dasharray="6 5"':'')+' points="'+s.pts.map(function(p){return X(p[0]).toFixed(1)+','+Y(p[1]).toFixed(1);}).join(' ')+'"/>';
+    var lp=s.pts[s.pts.length-1]; if (!s.dash) g+='<circle cx="'+X(lp[0])+'" cy="'+Y(lp[1])+'" r="4" fill="'+s.color+'"/>'; });
+  return g+'</svg>';
+}
+function barChart(bars, opts){
+  // bars: [{label, v, color, faded}]
+  var W=640,H=200,L=34,T=10,B=26, max=Math.max.apply(null,bars.map(function(b){return b.v;}).concat([1]))*1.1;
+  var bw=(W-L-8)/bars.length;
+  var g='<svg viewBox="0 0 '+W+' '+H+'">';
+  [0,0.5,1].forEach(function(f){ var y=T+(1-f)*(H-T-B); g+='<line x1="'+L+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="#e3e0d8"/><text x="'+(L-6)+'" y="'+(y+4)+'" font-size="13" fill="#6b736d" text-anchor="end">'+fmt(max*f)+'</text>'; });
+  bars.forEach(function(b,i){ var h=b.v/max*(H-T-B), x=L+i*bw+bw*0.15;
+    g+='<rect x="'+x+'" y="'+(H-B-h)+'" width="'+(bw*0.7)+'" height="'+h+'" rx="3" fill="'+(b.color||'#2f6b45')+'"'+(b.faded?' opacity=".35"':'')+'/>';
+    g+='<text x="'+(x+bw*0.35)+'" y="'+(H-8)+'" font-size="13" fill="#6b736d" text-anchor="middle">'+esc(b.label)+'</text>'; });
+  return g+'</svg>';
+}
+
+/* =====================================================================
+   VIEWS
+   ===================================================================== */
+var VIEWS={};
+
+/* ---------------- TODAY ---------------- */
+VIEWS.today=function(el){
+  var date=VIEW.todayDate||TODAY(), st=S();
+  var est=st.teams.map(function(t){ return teamEstimate(date,t.id); });
+  var bags=est.reduce(function(a,e){return a+e.bags;},0);
+  var anyLive=est.some(function(e){return e.state==='live';});
+  var endBins=est.reduce(function(a,e){ return a+(e.endBins!=null?e.endBins:e.binsSoFar); },0);
+  var actual=Store.where('bins',function(b){return b.date===date;});
+  var actTot=actual.reduce(function(a,b){return a+b.export+b.juice;},0), actExp=actual.reduce(function(a,b){return a+b.export;},0);
+  var isToday=date===TODAY();
+
+  var h='<div class="bar"><h2>'+(isToday?'Today':nice(date))+'</h2>'+
+    '<input type="date" id="tdDate" value="'+date+'" style="width:auto">'+
+    (isToday?'':'<button class="btn sm" id="tdNow">Back to today</button>')+'</div>';
+
+  // headline
+  h+='<div class="grid g3">';
+  h+='<div class="card kpi hero"><div class="lbl">'+(anyLive?'Estimated bins by '+minToHm(dayEnd()):'Bins picked (from bags)')+'</div><div class="val num">'+fmt(endBins,0)+'</div><div class="sub">'+
+     (anyLive?fmt(bags/st.bagsPerBin,0)+' bins so far, at the pace since the first bag':'Bags ÷ '+st.bagsPerBin+' bags per bin')+'</div></div>';
+  h+='<div class="card kpi"><div class="lbl">Bags so far</div><div class="val num">'+fmt(bags)+'</div><div class="sub">'+est.reduce(function(a,e){return a+e.pickers;},0)+' pickers scanned</div></div>';
+  h+='<div class="card kpi"><div class="lbl">Actual bins (Fanus)</div><div class="val num">'+(actual.length?fmt(actTot):'–')+'</div><div class="sub">'+
+     (actual.length? fmt(actExp)+' export · '+fmt(actTot-actExp)+' juice' : 'Not entered yet. <a href="#bins">Enter bins</a>')+'</div></div>';
+  h+='</div>';
+
+  // teams
+  h+='<div class="grid g2">';
+  est.forEach(function(e){
+    var bl=e.block?blockById(e.block):null;
+    h+='<div class="card"><div class="team-head"><h3>'+esc(teamName(e.team))+'</h3>'+
+      (bl?'<span class="tag">'+esc(bl.name)+'</span><span class="tag g">'+esc(vShort(bl.variety))+'</span>':'<span class="tag a">Not started</span>')+
+      (e.state==='live'?'<span class="tag b">Picking</span>':'')+'</div>';
+    if (e.state==='none'){ h+='<div class="mute">No bags scanned yet.</div></div>'; return; }
+    h+='<div class="stats">'+
+      '<div class="stat"><b class="num">'+fmt(e.bags)+'</b><span>bags so far</span></div>'+
+      '<div class="stat"><b class="num">'+fmt(e.binsSoFar,0)+'</b><span>bins so far</span></div>'+
+      '<div class="stat"><b class="num">'+(e.endBins!=null?fmt(e.endBins,0):'…')+'</b><span>'+(e.state==='live'?'est. bins by '+minToHm(dayEnd()):'bins for the day')+'</span></div></div>';
+    h+='<div class="small mute" style="margin-top:10px">';
+    if (e.state==='early') h+='Started '+minToHm(e.startM)+'. Estimate shows after 20 minutes of picking.';
+    else h+='Started '+minToHm(e.startM)+' · '+fmt(e.ratePerHour)+' bags an hour ('+fmt(e.perPickerHour,1)+' per picker)'+(e.state==='live'?' · '+fmt(e.remaining/60,1)+' picking hours left':'');
+    h+='</div></div>';
+  });
+  h+='</div>';
+
+  // per hour
+  var hours={}; Store.where('scans',function(s){return s.date===date && s.status==='OK';}).forEach(function(s){ var hh=new Date(s.t).getHours(); hours[hh]=(hours[hh]||0)+1; });
+  var hasScans=Object.keys(hours).length;
+  // rankings
+  var pds=Store.where('pickerDays',function(p){return p.date===date && bagsOf(p)>0;}).sort(function(a,b){return bagsOf(b)-bagsOf(a);});
+  var max=pds.length?bagsOf(pds[0]):1;
+  function rows(list,startRank){ return list.map(function(p,i){ var w=worker(p.workerId);
+    return '<div class="list-row click" data-w="'+p.workerId+'"><span class="rank">'+(startRank+i)+'</span><div style="min-width:120px;flex:1.2"><b>'+esc(wName(w))+'</b> <span class="mute small">#'+w.no+' · '+esc(teamName(p.team))+'</span></div><div class="barw hide-m"><i style="width:'+(bagsOf(p)/max*100)+'%"></i></div><b class="num" style="width:44px;text-align:right">'+bagsOf(p)+'</b></div>'; }).join(''); }
+  h+='<div class="grid g2">';
+  h+='<div class="card"><h3>Top 5 pickers</h3>'+(pds.length?rows(pds.slice(0,5),1):'<div class="empty">No bags yet.</div>')+'</div>';
+  h+='<div class="card"><h3>Bottom 5 pickers</h3>'+(pds.length>5?rows(pds.slice(-5).reverse().reverse(),pds.length-4):'<div class="empty">Not enough pickers yet.</div>')+
+     '<div class="small mute" style="margin-top:8px">Pair these with a strong picker. <a href="#pickers">All pickers</a></div></div>';
+  h+='</div>';
+  if (hasScans){
+    var hb=[]; for (var x=6;x<=16;x++) hb.push({label:x+':00',v:hours[x]||0,faded:!inSession(x*60+30)});
+    h+='<div class="card chart"><h3>Bags per hour</h3>'+barChart(hb)+'</div>';
+  }
+  // needs attention
+  var attn=[];
+  pds.forEach(function(p){ if (p.manual>=3) attn.push('<b>'+esc(wName(worker(p.workerId)))+'</b> #'+worker(p.workerId).no+': '+p.manual+' bags typed by hand. Band may be faulty.'); });
+  var unk=Store.where('scans',function(s){return s.date===date && s.status==='UNKNOWN';}).length;
+  if (unk) attn.push(unk+' taps from bands that are not linked to anyone.');
+  if (attn.length) h+='<div class="card"><h3>Needs attention</h3>'+attn.map(function(a){return '<div class="list-row">'+a+'</div>';}).join('')+'</div>';
+  el.innerHTML=h;
+  $('tdDate').onchange=function(){ VIEW.todayDate=this.value||null; route(); };
+  if ($('tdNow')) $('tdNow').onclick=function(){ VIEW.todayDate=null; route(); };
+  el.querySelectorAll('[data-w]').forEach(function(r){ r.onclick=function(){ pickerModal(r.getAttribute('data-w')); }; });
+};
+
+/* ---------------- PICKERS ---------------- */
+VIEWS.pickers=function(el){
+  var period=VIEW.pPeriod||'week', q=(VIEW.pQ||'').toLowerCase(), team=VIEW.pTeam||'all', today=TODAY();
+  var ws=weekStart(today), from = period==='today'?today : period==='week'?ws : '0000';
+  var label = period==='today'?'Today':period==='week'?'This week (from '+nice(ws)+')':'Season';
+  var rows=Store.where('workers',function(w){ return w.role==='picker' && w.active && (team==='all'||w.team===team) && (!q || (wName(w)+' '+w.no).toLowerCase().indexOf(q)>=0); }).map(function(w){
+    var pds=Store.where('pickerDays',function(p){ return p.workerId===w.id && p.date>=from && p.date<=today; });
+    var bags=pds.reduce(function(a,p){return a+bagsOf(p);},0), days=pds.filter(function(p){return bagsOf(p)>0;}).length;
+    var best=pds.reduce(function(a,p){return Math.max(a,bagsOf(p));},0);
+    return {w:w,bags:bags,days:days,avg:days?bags/days:0,best:best};
+  });
+  var sort=VIEW.pSort||'bags'; rows.sort(function(a,b){ return sort==='no'? a.w.no-b.w.no : sort==='avg'? b.avg-a.avg : b.bags-a.bags; });
+  var tot=rows.reduce(function(a,r){return a+r.bags;},0);
+  var h='<div class="bar"><h2>Pickers</h2>'+
+    '<div class="seg" id="pPer"><button data-v="today">Today</button><button data-v="week">This week</button><button data-v="season">Season</button></div>'+
+    '<select id="pTeam" style="width:auto"><option value="all">Both teams</option>'+S().teams.map(function(t){return '<option value="'+t.id+'"'+(team===t.id?' selected':'')+'>'+esc(t.name)+'</option>';}).join('')+'</select>'+
+    '<input type="search" id="pQ" placeholder="Search name or number" value="'+esc(VIEW.pQ||'')+'" style="max-width:220px"></div>';
+  h+='<div class="card"><div class="small mute" style="margin-bottom:6px">'+label+' · '+rows.length+' pickers · '+fmt(tot)+' bags · '+fmt(tot/S().bagsPerBin,0)+' bins. Tap a picker for their days and to correct a count.</div><div class="tw"><table><thead><tr>'+
+    '<th class="click" data-s="no">#</th><th>Name</th><th class="hide-m">Team</th><th class="hide-m">Paid</th><th class="r click" data-s="bags">Bags ▾</th><th class="r hide-m">Days</th><th class="r click" data-s="avg">Avg/day</th><th class="r hide-m">Best</th></tr></thead><tbody>'+
+    rows.map(function(r){ return '<tr class="click" data-w="'+r.w.id+'"><td class="num">'+r.w.no+'</td><td><b>'+esc(wName(r.w))+'</b></td><td class="hide-m">'+esc(teamName(r.w.team))+'</td><td class="hide-m"><span class="tag'+(r.w.pay==='day'?' g':'')+'">'+(r.w.pay==='day'?'Day':'Contract')+'</span></td><td class="r num"><b>'+fmt(r.bags)+'</b></td><td class="r num hide-m">'+r.days+'</td><td class="r num">'+fmt(r.avg)+'</td><td class="r num hide-m">'+r.best+'</td></tr>'; }).join('')+
+    '</tbody></table></div></div>';
+  el.innerHTML=h;
+  el.querySelectorAll('#pPer button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-v')===period); b.onclick=function(){ VIEW.pPeriod=b.getAttribute('data-v'); route(); }; });
+  $('pTeam').onchange=function(){ VIEW.pTeam=this.value; route(); };
+  $('pQ').oninput=function(){ VIEW.pQ=this.value; var p=this.selectionStart; route(); var n=$('pQ'); n.focus(); n.setSelectionRange(p,p); };
+  el.querySelectorAll('[data-s]').forEach(function(t){ t.onclick=function(){ VIEW.pSort=t.getAttribute('data-s'); route(); }; });
+  el.querySelectorAll('tr[data-w]').forEach(function(r){ r.onclick=function(){ pickerModal(r.getAttribute('data-w')); }; });
+};
+
+function pickerModal(wid){
+  var w=worker(wid), today=TODAY();
+  var pds=Store.where('pickerDays',function(p){return p.workerId===wid;}).sort(function(a,b){return a.date<b.date?1:-1;});
+  var tot=pds.reduce(function(a,p){return a+bagsOf(p);},0);
+  var h='<h2>'+esc(wName(w))+' <span class="mute">#'+w.no+'</span></h2><div class="small mute" style="margin:4px 0 12px">'+esc(teamName(w.team))+' · '+(w.pay==='day'?'Day worker, paid per bag':'Contract worker, performance only')+' · band '+(w.uid?esc(w.uid):'not linked')+'</div>'+
+    '<div class="stats" style="margin-bottom:12px"><div class="stat"><b>'+fmt(tot)+'</b><span>bags this season</span></div><div class="stat"><b>'+pds.length+'</b><span>days picked</span></div><div class="stat"><b>'+(pds.length?fmt(tot/pds.length):0)+'</b><span>average a day</span></div></div>'+
+    '<table><thead><tr><th>Day</th><th>Block</th><th class="r">Scanned</th><th class="r">Correction</th><th class="r">Bags</th></tr></thead><tbody>'+
+    pds.map(function(p){ var b=blockById(p.block); return '<tr><td>'+nice(p.date)+'</td><td>'+(b?esc(b.name):'')+'</td><td class="r num">'+p.bags+(p.manual?' <span class="tiny mute">('+p.manual+' typed)</span>':'')+'</td><td class="r num">'+(p.adj?(p.adj>0?'+':'')+p.adj+(p.adjWhy?' <span class="tiny mute" title="'+esc(p.adjWhy)+'">ⓘ</span>':''):'')+'</td><td class="r num"><b>'+bagsOf(p)+'</b></td></tr>'; }).join('')+
+    '</tbody></table>'+
+    '<div class="card" style="margin-top:14px;background:var(--soft);box-shadow:none"><h3>Correct a count or add bags from paper</h3><div class="fr">'+
+    '<div><label class="f">Day</label><input type="date" id="cDate" value="'+today+'"></div><div><label class="f">Bags to add (use minus to remove)</label><input type="number" id="cN" placeholder="e.g. 12 or -2"></div></div>'+
+    '<label class="f">Reason (kept in the change log)</label><input type="text" id="cWhy" placeholder="e.g. Phone flat after lunch, from QC paper">'+
+    '<div class="acts"><button class="btn p" data-a="fix">Save correction</button></div></div>'+
+    '<div class="acts"><button class="btn" data-a="close">Close</button></div>';
+  modal(h,{ fix:function(){
+    var d=$('cDate').value, n=parseInt($('cN').value,10), why=$('cWhy').value.trim();
+    if (!d||!n) return toast('Enter a day and a number of bags');
+    if (!why) return toast('Give a reason');
+    var td=Store.get('teamDays',d+'|'+w.team);
+    var pd=pdFor(d,wid)||{id:d+'|'+wid,date:d,workerId:wid,team:w.team,block:td?td.block:'',bags:0,manual:0,adj:0,first:null,last:null};
+    if (bagsOf(pd)+n<0) return toast('That would make the day negative');
+    pd.adj=(pd.adj||0)+n; pd.adjWhy=((pd.adjWhy?pd.adjWhy+'; ':'')+why);
+    Store.put('pickerDays',pd); Store.log(ME.name,'Corrected '+wName(w)+' #'+w.no+' on '+d+' by '+(n>0?'+':'')+n+' bags: '+why);
+    toast('Saved'); pickerModal(wid);
+  }});
+}
+
+/* ---------------- BINS ---------------- */
+VIEWS.bins=function(el){
+  var date=VIEW.binDate||TODAY(), st=S();
+  var picking={}; Store.where('teamDays',function(t){return t.date===date;}).forEach(function(t){ var b=blockById(t.block); if (b) picking[b.variety]=1; });
+  Store.where('bins',function(b){return b.date===date;}).forEach(function(b){ picking[b.variety]=1; });
+  var show=VARIETIES.filter(function(v){ return picking[v.code] || VIEW.binExtra===v.code; });
+  if (!show.length) show=[VARIETIES[0]];
+  var est=st.teams.map(function(t){return teamEstimate(date,t.id);});
+  var estBins=est.reduce(function(a,e){return a+e.binsSoFar;},0);
+  var h='<div class="bar"><h2>Bins</h2><input type="date" id="bDate" value="'+date+'" style="width:auto"></div>';
+  h+='<div class="card"><h3>'+nice(date)+': bins on the whiteboard</h3><div class="small mute" style="margin-bottom:8px">Enter at the end of the day. Export = plastic bins, juice = wooden bins.</div><div class="tw"><table><thead><tr><th>Variety</th><th class="r">Export</th><th class="r">Juice</th><th class="r">Total</th></tr></thead><tbody>';
+  show.forEach(function(v){ var r=Store.get('bins',date+'|'+v.code)||{export:'',juice:''};
+    h+='<tr><td><b>'+esc(vShort(v.code))+'</b></td><td class="r"><input class="cell" type="number" min="0" inputmode="numeric" data-v="'+v.code+'" data-k="export" value="'+r.export+'"></td><td class="r"><input class="cell" type="number" min="0" inputmode="numeric" data-v="'+v.code+'" data-k="juice" value="'+r.juice+'"></td><td class="r num"><b>'+((+r.export||0)+(+r.juice||0)||'')+'</b></td></tr>'; });
+  h+='</tbody></table></div>';
+  var others=VARIETIES.filter(function(v){return show.indexOf(v)<0;});
+  if (others.length) h+='<div style="margin-top:10px"><select id="bAdd" style="width:auto"><option value="">+ Add another variety</option>'+others.map(function(v){return '<option value="'+v.code+'">'+esc(v.name)+'</option>';}).join('')+'</select></div>';
+  var act=Store.where('bins',function(b){return b.date===date;}).reduce(function(a,b){return a+b.export+b.juice;},0);
+  if (estBins>0) h+='<div class="note b" style="margin:12px 0 0">Bags scanned this day = <b>'+fmt(estBins,0)+' bins</b> at '+st.bagsPerBin+' bags a bin.'+(act?' Whiteboard says <b>'+act+'</b>, a difference of '+fmt(act-estBins,0)+'.':'')+'</div>';
+  h+='</div>';
+  // history list
+  var byDate={}; Store.all('bins').forEach(function(b){ var d=byDate[b.date]||(byDate[b.date]={date:b.date,exp:0,juice:0,v:{}}); d.exp+=b.export; d.juice+=b.juice; d.v[b.variety]=1; });
+  var days=Object.keys(byDate).sort().reverse();
+  var se=0,sj=0; days.forEach(function(d){ se+=byDate[d].exp; sj+=byDate[d].juice; });
+  h+='<div class="card"><h3>This season</h3><div class="small mute" style="margin-bottom:6px">'+fmt(se+sj)+' bins: '+fmt(se)+' export ('+(se+sj?Math.round(se/(se+sj)*100):0)+'%) and '+fmt(sj)+' juice.</div><div class="tw"><table><thead><tr><th>Day</th><th>Variety</th><th class="r">Export</th><th class="r">Juice</th><th class="r">Total</th><th class="r hide-m">From bags</th></tr></thead><tbody>'+
+    days.map(function(d){ var x=byDate[d], fb=st.teams.reduce(function(a,t){return a+teamEstimate(d,t.id).binsSoFar;},0);
+      return '<tr class="click" data-d="'+d+'"><td>'+nice(d)+'</td><td>'+Object.keys(x.v).map(vShort).join(', ')+'</td><td class="r num">'+x.exp+'</td><td class="r num">'+x.juice+'</td><td class="r num"><b>'+(x.exp+x.juice)+'</b></td><td class="r num mute hide-m">'+(fb?fmt(fb,0):'')+'</td></tr>'; }).join('')+
+    '<tr class="tot"><td>Season</td><td></td><td class="r num">'+se+'</td><td class="r num">'+sj+'</td><td class="r num">'+(se+sj)+'</td><td class="hide-m"></td></tr></tbody></table></div></div>';
+  el.innerHTML=h;
+  $('bDate').onchange=function(){ VIEW.binDate=this.value||null; VIEW.binExtra=null; route(); };
+  if ($('bAdd')) $('bAdd').onchange=function(){ VIEW.binExtra=this.value; route(); };
+  el.querySelectorAll('input.cell').forEach(function(inp){ inp.onchange=function(){
+    var v=inp.getAttribute('data-v'), k=inp.getAttribute('data-k'), id=date+'|'+v;
+    var r=Store.get('bins',id)||{id:id,date:date,variety:v,export:0,juice:0};
+    r[k]=Math.max(0,parseInt(inp.value,10)||0); r.by=ME.name; r.at=Date.now();
+    Store.put('bins',r); Store.log(ME.name,'Bins '+date+' '+v+': '+r.export+' export, '+r.juice+' juice'); toast('Saved'); }; });
+  el.querySelectorAll('tr[data-d]').forEach(function(r){ r.onclick=function(){ VIEW.binDate=r.getAttribute('data-d'); route(); window.scrollTo(0,0); }; });
+};
+
+/* ---------------- PAY ---------------- */
+VIEWS.pay=function(el){
+  var st=S(), today=TODAY(), cur=weekStart(today);
+  var ws=VIEW.payWeek||cur, days=weekDays(ws), paid=Store.get('paidWeeks',ws);
+  var locked=!!paid;
+  var pickers=Store.where('workers',function(w){return w.role==='picker' && w.pay==='day';}).sort(function(a,b){return a.no-b.no;});
+  var sorters=Store.where('workers',function(w){return w.role==='sorter';}).sort(function(a,b){return a.no-b.no;});
+  var rows=pickers.map(function(w){ var d=days.map(function(x){ return bagsOf(pdFor(x,w.id)); }); var bags=d.reduce(function(a,b){return a+b;},0);
+    var loan=(Store.get('loans',ws+'|'+w.id)||{}).amount||0; return {w:w,d:d,bags:bags,gross:bags*st.ratePerBag,loan:loan,net:bags*st.ratePerBag-loan}; })
+    .filter(function(r){ return r.w.active || r.bags || r.loan; });
+  var T={bags:0,gross:0,loan:0,net:0}; rows.forEach(function(r){ T.bags+=r.bags; T.gross+=r.gross; T.loan+=r.loan; T.net+=r.net; });
+  var weeks=[]; for (var i=0;i<8;i++) weeks.push(addDays(cur,-7*i));
+  var h='<div class="bar"><h2>Pay</h2><select id="payW" style="width:auto">'+weeks.map(function(w){ return '<option value="'+w+'"'+(w===ws?' selected':'')+'>'+niceShort(w)+' to '+niceShort(addDays(w,6))+(w===cur?' (this week)':'')+(Store.get('paidWeeks',w)?' · paid':'')+'</option>'; }).join('')+'</select>'+
+    '<button class="btn" id="payX">Excel</button><button class="btn hide-m" onclick="window.print()">Print</button></div>';
+  h+='<div class="grid g4">'+
+    '<div class="card kpi hero"><div class="lbl">Cash needed</div><div class="val num">'+R(T.net)+'</div><div class="sub">Payday '+nice(payday(ws))+'</div></div>'+
+    '<div class="card kpi"><div class="lbl">Bags</div><div class="val num">'+fmt(T.bags)+'</div><div class="sub">× '+R(st.ratePerBag)+' = '+R(T.gross)+'</div></div>'+
+    '<div class="card kpi"><div class="lbl">Loans deducted</div><div class="val num">'+R(T.loan)+'</div><div class="sub">'+rows.filter(function(r){return r.loan;}).length+' pickers</div></div>'+
+    '<div class="card kpi"><div class="lbl">Status</div><div class="val" style="font-size:22px;margin-top:10px">'+(locked?'<span class="tag g" style="font-size:15px">Paid</span>':(ws===cur?'<span class="tag a" style="font-size:15px">Week still running</span>':'<span class="tag b" style="font-size:15px">Ready to pay</span>'))+'</div><div class="sub">'+(locked?'Locked by '+esc(paid.by):'Day workers only')+'</div></div></div>';
+  if (locked) h+='<div class="note">This week is marked as paid, so bags and loans are locked. '+(ME.id==='adolf'||ME.id==='wian'?'<a href="#" id="unlock">Unlock</a>':'')+'</div>';
+  h+='<div class="card"><h3>Day-worker pickers</h3><div class="tw"><table><thead><tr><th>#</th><th>Name</th>'+days.map(function(d){var x=parseYmd(d); return '<th class="r hide-m">'+DOW[x.getDay()]+'<br><span class="tiny">'+x.getDate()+'</span></th>';}).join('')+
+    '<th class="r">Bags</th><th class="r">Gross</th><th class="r">Loan</th><th class="r">To pay</th></tr></thead><tbody>'+
+    rows.map(function(r){ return '<tr><td class="num">'+r.w.no+'</td><td class="click" data-w="'+r.w.id+'"><b>'+esc(wName(r.w))+'</b></td>'+r.d.map(function(b){return '<td class="r num mute hide-m">'+(b||'')+'</td>';}).join('')+
+      '<td class="r num">'+r.bags+'</td><td class="r num">'+R(r.gross)+'</td><td class="r">'+(locked?R(r.loan):'<input class="cell" type="number" min="0" step="10" inputmode="numeric" data-loan="'+r.w.id+'" value="'+(r.loan||'')+'" placeholder="0">')+'</td><td class="r num"><b>'+R(r.net)+'</b></td></tr>'; }).join('')+
+    '<tr class="tot"><td></td><td>Total</td>'+days.map(function(d,i){ return '<td class="r num hide-m">'+fmt(rows.reduce(function(a,r){return a+r.d[i];},0))+'</td>'; }).join('')+'<td class="r num">'+fmt(T.bags)+'</td><td class="r num">'+R(T.gross)+'</td><td class="r num">'+R(T.loan)+'</td><td class="r num">'+R(T.net)+'</td></tr></tbody></table></div>'+
+    '<div class="small mute" style="margin-top:8px">Loans: one total per picker for the week, deducted in full on payday. Rate '+R(st.ratePerBag)+' a bag (change it in Settings).</div></div>';
+  // sorters attendance
+  h+='<div class="card"><h3>Sorters: attendance</h3><div class="small mute" style="margin-bottom:6px">Tick the days each sorter worked. Paid per day, outside this app.</div><div class="tw"><table><thead><tr><th>#</th><th>Name</th>'+days.map(function(d){var x=parseYmd(d); return '<th style="text-align:center">'+DOW[x.getDay()]+'<br><span class="tiny">'+x.getDate()+'</span></th>';}).join('')+'<th class="r">Days</th></tr></thead><tbody>'+
+    sorters.map(function(w){ var n=0; return '<tr><td class="num">'+w.no+'</td><td><b>'+esc(wName(w))+'</b></td>'+days.map(function(d){ var on=!!Store.get('attendance',d+'|'+w.id); if (on) n++;
+      return '<td style="text-align:center"><span class="check'+(on?' on':'')+'" data-att="'+d+'|'+w.id+'">'+(on?'✓':'')+'</span></td>'; }).join('')+'<td class="r num"><b>'+n+'</b></td></tr>'; }).join('')+
+    '</tbody></table></div></div>';
+  if (!locked && ws!==cur) h+='<div class="no-print" style="text-align:right"><button class="btn p" id="markPaid">Mark week as paid and lock it</button></div>';
+  el.innerHTML=h;
+  $('payW').onchange=function(){ VIEW.payWeek=this.value; route(); };
+  $('payX').onclick=function(){ exportPay(ws,days,rows,T,sorters); };
+  el.querySelectorAll('[data-loan]').forEach(function(inp){ inp.onchange=function(){
+    var wid=inp.getAttribute('data-loan'), v=Math.max(0,parseFloat(inp.value)||0), id=ws+'|'+wid, w=worker(wid);
+    if (v) Store.put('loans',{id:id,week:ws,workerId:wid,amount:v,by:ME.name,at:Date.now()}); else if (Store.get('loans',id)) Store.del('loans',id);
+    Store.log(ME.name,'Loan for '+wName(w)+' #'+w.no+', week of '+ws+': '+R(v)); toast('Loan saved'); }; });
+  el.querySelectorAll('[data-att]').forEach(function(c){ c.onclick=function(){
+    if (locked) return toast('This week is locked');
+    var p=c.getAttribute('data-att').split('|'), id=p[0]+'|'+p[1], w=worker(p[1]);
+    if (Store.get('attendance',id)){ Store.del('attendance',id); Store.log(ME.name,'Removed attendance '+wName(w)+' '+p[0]); }
+    else { Store.put('attendance',{id:id,date:p[0],workerId:p[1],present:true}); Store.log(ME.name,'Attendance '+wName(w)+' '+p[0]); } }; });
+  el.querySelectorAll('td[data-w]').forEach(function(r){ r.onclick=function(){ pickerModal(r.getAttribute('data-w')); }; });
+  if ($('markPaid')) $('markPaid').onclick=function(){
+    modal('<h2>Mark as paid?</h2><p>'+fmt(rows.filter(function(r){return r.net>0;}).length)+' pickers, '+R(T.net)+' in cash for the week '+niceShort(ws)+' to '+niceShort(addDays(ws,6))+'. Bags and loans for this week will be locked.</p><div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Yes, paid</button></div>',
+      { ok:function(){ Store.put('paidWeeks',{id:ws,week:ws,paidAt:Date.now(),by:ME.name,total:T.net}); Store.log(ME.name,'Marked week '+ws+' as paid: '+R(T.net)); closeModal(); route(); } }); };
+  if ($('unlock')) $('unlock').onclick=function(e){ e.preventDefault(); Store.del('paidWeeks',ws); Store.log(ME.name,'Unlocked paid week '+ws); };
+};
+function exportPay(ws,days,rows,T,sorters){
+  var head=['No','Name'].concat(days.map(function(d){return nice(d);})).concat(['Bags','Rate','Gross','Loan','To pay']);
+  var data=[head].concat(rows.map(function(r){ return [r.w.no,wName(r.w)].concat(r.d).concat([r.bags,S().ratePerBag,r.gross,r.loan,r.net]); }));
+  data.push(['','Total'].concat(days.map(function(d,i){return rows.reduce(function(a,r){return a+r.d[i];},0);})).concat([T.bags,'',T.gross,T.loan,T.net]));
+  var srt=[['No','Name'].concat(days.map(function(d){return nice(d);})).concat(['Days'])].concat(sorters.map(function(w){ var n=0; var c=days.map(function(d){ var on=!!Store.get('attendance',d+'|'+w.id); if(on)n++; return on?'Yes':''; }); return [w.no,wName(w)].concat(c).concat([n]); }));
+  var name='Sandrivier pay '+ws+' to '+addDays(ws,6)+'.xlsx';
+  if (window.XLSX){ var wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(data),'Pickers'); XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(srt),'Sorters'); XLSX.writeFile(wb,name); }
+  else { var csv=data.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n'); var a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'})); a.download=name.replace('.xlsx','.csv'); a.click(); }
+  Store.log(ME.name,'Exported pay for week '+ws);
+}
+
+/* ---------------- SEASON ---------------- */
+VIEWS.season=function(el){
+  var st=S();
+  // this season from the Bins entries; previous seasons from the whiteboard history
+  var seasons={};
+  Object.keys(HIST).forEach(function(y){ seasons[y]=HIST[y]; });
+  seasons[st.season]=Store.all('bins').map(function(b){ return [b.date,b.variety,b.export,b.juice]; });
+  function series(rows,v,field){ var r=rows.filter(function(x){ return x[1]===v && (x[2]+x[3])>0; }).sort(function(a,b){return a[0]<b[0]?-1:1;});
+    var c=0; return r.map(function(x,i){ c+= field==='export'?x[2]: field==='juice'?x[3] : x[2]+x[3]; return [i+1,c]; }); }
+  function total(rows,v,f){ return rows.filter(function(x){return !v||x[1]===v;}).reduce(function(a,x){return a+(f==='export'?x[2]:f==='juice'?x[3]:x[2]+x[3]);},0); }
+  var v=VIEW.sVar||'EBC', f=VIEW.sField||'total';
+  var years=Object.keys(seasons).sort();
+  var colors={}; colors[st.season]='#2f6b45'; colors[years[years.length-2]]='#c9b23a'; colors[years[years.length-3]]='#9aa39d';
+  var h='<div class="bar"><h2>Season</h2><div class="seg" id="sF"><button data-v="total">All bins</button><button data-v="export">Export</button><button data-v="juice">Juice</button></div></div>';
+  // per variety cards
+  h+='<div class="grid g3">';
+  ['EBC','PTR','FRL'].forEach(function(code){
+    var now=series(seasons[st.season],code,f), lastY=years[years.length-2], last=series(seasons[lastY],code,f);
+    var n=now.length, cur=n?now[n-1][1]:0, lastSame=n&&last.length?(last[Math.min(n,last.length)-1][1]):0, lastTot=last.length?last[last.length-1][1]:0;
+    var diff=lastSame?Math.round((cur-lastSame)/lastSame*100):null;
+    h+='<div class="card kpi click" data-v="'+code+'" style="'+(v===code?'outline:2px solid var(--green)':'')+'"><div class="lbl">'+esc(vShort(code))+'</div><div class="val num">'+fmt(cur)+'</div><div class="sub">'+
+      (n? 'After '+n+' picking day'+(n>1?'s':'')+'. Last season at day '+n+': '+fmt(lastSame)+(diff!=null?' <span class="tag '+(diff>=0?'g':'r')+'">'+(diff>=0?'+':'')+diff+'%</span>':'') : 'Not started. Last season: '+fmt(lastTot)+' bins in '+last.length+' days')+'</div></div>';
+  });
+  h+='</div>';
+  var ser=years.slice(-3).map(function(y){ return {name:y===st.season?st.seasonLabel+' (this season)':'Harvest '+y, color:colors[y]||'#9aa39d', pts:series(seasons[y],v,f), dash:y!==st.season, w:y===st.season?3.5:2}; });
+  var maxDay=Math.max.apply(null,ser.map(function(s){return s.pts.length;}).concat([1]));
+  var xt=[]; for (var d=1; d<=maxDay; d+= maxDay>20?5:maxDay>10?2:1) xt.push([d,'Day '+d]);
+  h+='<div class="card chart"><h3>'+esc(vName(v))+': '+(f==='total'?'all bins':f+' bins')+', added up by picking day</h3><div class="small mute">Day 1 = first day this variety was picked that season, so an early season still compares fairly.</div>'+lineChart(ser,{xticks:xt})+
+    '<div class="legend">'+ser.map(function(s){ return '<span><i style="background:'+s.color+'"></i>'+esc(s.name)+' · '+fmt(s.pts.length?s.pts[s.pts.length-1][1]:0)+'</span>'; }).join('')+'</div></div>';
+  // totals table
+  h+='<div class="card"><h3>Season totals (bins)</h3><div class="tw"><table><thead><tr><th>Variety</th>'+years.map(function(y){return '<th class="r">'+(y===st.season?'This season':'Harvest '+y)+'</th>';}).join('')+'</tr></thead><tbody>'+
+    VARIETIES.map(function(x){ return '<tr><td>'+esc(vShort(x.code))+'</td>'+years.map(function(y){ var t=total(seasons[y],x.code,f); return '<td class="r num">'+(t||'')+'</td>'; }).join('')+'</tr>'; }).join('')+
+    '<tr class="tot"><td>All</td>'+years.map(function(y){ return '<td class="r num">'+fmt(total(seasons[y],null,f))+'</td>'; }).join('')+'</tr></tbody></table></div>'+
+    '<div class="small mute" style="margin-top:8px">Previous seasons from Fanus\'s whiteboard records. 2025 juice includes canning bins.</div></div>';
+  el.innerHTML=h;
+  el.querySelectorAll('#sF button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-v')===f); b.onclick=function(){ VIEW.sField=b.getAttribute('data-v'); route(); }; });
+  el.querySelectorAll('.kpi[data-v]').forEach(function(c){ c.onclick=function(){ VIEW.sVar=c.getAttribute('data-v'); route(); }; });
+};
+
+/* ---------------- ORCHARDS ---------------- */
+VIEWS.orchards=function(el){
+  var blocks=Store.all('blocks').sort(function(a,b){return +a.id-+b.id;});
+  var years=[]; Store.all('bloom').forEach(function(b){ if (years.indexOf(b.year)<0) years.push(b.year); }); years.sort().reverse();
+  var h='<div class="bar"><h2>Orchards</h2></div>';
+  h+='<div class="card"><h3>Blocks</h3><div class="small mute" style="margin-bottom:6px">From the block master. Tap a block to edit. Rows per block still to fill in.</div><div class="tw"><table><thead><tr><th>Block</th><th>Variety</th><th class="r">Trees</th><th class="r">Ha</th><th class="r">Rows</th><th class="hide-m">Planted</th><th class="hide-m">Spacing</th><th>Soil</th><th class="hide-m">Ridged</th></tr></thead><tbody>'+
+    blocks.map(function(b){ return '<tr class="click" data-b="'+b.id+'"><td><b>'+esc(b.name)+'</b></td><td>'+esc(vShort(b.variety))+'</td><td class="r num">'+fmt(b.trees)+'</td><td class="r num">'+b.ha+'</td><td class="r num">'+(b.rows||'<span class="mute">–</span>')+'</td><td class="hide-m">'+esc(b.planted)+'</td><td class="hide-m">'+esc(b.spacing)+'</td><td>'+esc(b.soil)+'</td><td class="hide-m">'+esc(b.ridged)+'</td></tr>'; }).join('')+
+    '<tr class="tot"><td>Farm</td><td></td><td class="r num">'+fmt(blocks.reduce(function(a,b){return a+(+b.trees||0);},0))+'</td><td class="r num">'+blocks.reduce(function(a,b){return a+(+b.ha||0);},0)+'</td><td></td><td class="hide-m"></td><td class="hide-m"></td><td></td><td class="hide-m"></td></tr></tbody></table></div>'+
+    '<div style="margin-top:10px"><button class="btn sm" id="addBlock">+ Add block</button></div></div>';
+  h+='<div class="card"><div class="bar" style="margin-bottom:6px"><h3 style="margin:0;margin-right:auto">Full bloom dates</h3><button class="btn sm" id="addYear">+ Add year</button></div><div class="small mute" style="margin-bottom:6px">Bloom in spring, harvest the following summer. Tap a date to change it.</div><div class="tw"><table><thead><tr><th>Bloom year</th>'+
+    blocks.map(function(b){ return '<th class="r">'+esc(b.name.replace('Blok ','B'))+'<br><span class="tiny">'+esc(b.variety)+'</span></th>'; }).join('')+'</tr></thead><tbody>'+
+    years.map(function(y){ return '<tr><td><b>'+y+'</b></td>'+blocks.map(function(b){ var r=Store.get('bloom',y+'|'+b.id); return '<td class="r num click" data-bl="'+y+'|'+b.id+'">'+(r?niceShort(r.date):'<span class="mute">–</span>')+'</td>'; }).join('')+'</tr>'; }).join('')+
+    '</tbody></table></div></div>';
+  h+='<div class="card" style="opacity:.75"><h3>Weather and soil data</h3><div class="mute">Coming later: import iLeaf weather and soil probe readings here.</div></div>';
+  el.innerHTML=h;
+  el.querySelectorAll('tr[data-b]').forEach(function(r){ r.onclick=function(){ blockModal(r.getAttribute('data-b')); }; });
+  $('addBlock').onclick=function(){ blockModal(null); };
+  el.querySelectorAll('[data-bl]').forEach(function(c){ c.onclick=function(){
+    var p=c.getAttribute('data-bl').split('|'), r=Store.get('bloom',p[0]+'|'+p[1]), b=blockById(p[1]);
+    modal('<h2>Full bloom: '+esc(b.name)+', '+p[0]+'</h2><label class="f">Date</label><input type="date" id="blD" value="'+(r?r.date:p[0]+'-09-15')+'"><div class="acts">'+(r?'<button class="btn d" data-a="del">Clear</button>':'')+'<button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Save</button></div>',
+      { ok:function(){ var d=$('blD').value; if (!d) return; Store.put('bloom',{id:p[0]+'|'+p[1],year:p[0],block:p[1],date:d}); Store.log(ME.name,'Bloom '+b.name+' '+p[0]+': '+d); closeModal(); route(); },
+        del:function(){ Store.del('bloom',p[0]+'|'+p[1]); closeModal(); route(); } }); }; });
+  $('addYear').onclick=function(){ var y=String(new Date().getFullYear()); if (years.indexOf(y)>=0) y=String(+years[0]+1);
+    modal('<h2>Add bloom year</h2><label class="f">Year</label><input type="number" id="byY" value="'+y+'"><div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Add</button></div>',
+      { ok:function(){ var yy=$('byY').value; if (!/^\d{4}$/.test(yy)) return toast('Enter a year like 2027');
+        Store.put('bloom',{id:yy+'|1',year:yy,block:'1',date:yy+'-09-25'}); closeModal(); toast('Year added. Tap each date to set it.'); route(); } }); };
+};
+function blockModal(id){
+  var b=id?blockById(id):{id:String(Store.all('blocks').length+1),name:'Blok '+(Store.all('blocks').length+1),variety:'PTR',planted:'',trees:'',ha:'',rows:'',spacing:'',soil:'',ridged:'',notes:''};
+  var f=function(k,l,t){ return '<div><label class="f">'+l+'</label><input type="'+(t||'text')+'" id="bk_'+k+'" value="'+esc(b[k])+'"></div>'; };
+  modal('<h2>'+(id?esc(b.name):'New block')+'</h2><div class="fr">'+f('name','Name')+'<div><label class="f">Variety</label><select id="bk_variety">'+VARIETIES.map(function(v){return '<option value="'+v.code+'"'+(v.code===b.variety?' selected':'')+'>'+esc(v.name)+'</option>';}).join('')+'</select></div>'+
+    f('trees','Trees','number')+f('ha','Hectares','number')+f('rows','Rows','number')+f('planted','Year planted')+f('spacing','Spacing')+f('soil','Soil type')+f('ridged','Ridged')+'</div>'+f('notes','Notes')+
+    '<div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Save</button></div>',
+    { ok:function(){ ['name','variety','trees','ha','rows','planted','spacing','soil','ridged','notes'].forEach(function(k){ var v=$('bk_'+k).value; b[k]=(k==='trees'||k==='ha'||k==='rows')?(v===''?'':+v):v; });
+      Store.put('blocks',b); Store.log(ME.name,'Block saved: '+b.name); closeModal(); route(); } });
+}
+
+/* ---------------- SETTINGS ---------------- */
+VIEWS.settings=function(el){
+  var st=S(), q=(VIEW.wQ||'').toLowerCase(), showAll=!!VIEW.wAll;
+  var ws=Store.where('workers',function(w){ return (showAll||w.active) && (!q || (wName(w)+' '+w.no+' '+w.uid).toLowerCase().indexOf(q)>=0); }).sort(function(a,b){return a.no-b.no;});
+  var unlinked=Store.where('workers',function(w){return w.active && w.role==='picker' && !w.uid;}).length;
+  var h='<div class="bar"><h2>Settings</h2></div>';
+  h+='<div class="card"><div class="bar" style="margin-bottom:8px"><h3 style="margin:0;margin-right:auto">Workers</h3><input type="search" id="wQ" placeholder="Search" value="'+esc(VIEW.wQ||'')+'" style="max-width:200px"><button class="btn p" id="addW">+ Add worker</button></div>'+
+    (unlinked?'<div class="note">'+unlinked+' active picker'+(unlinked>1?'s have':' has')+' no band linked yet.</div>':'')+
+    '<div class="tw"><table><thead><tr><th>#</th><th>Name</th><th>Work</th><th class="hide-m">Paid</th><th class="hide-m">Team</th><th>Band</th><th class="hide-m">Status</th></tr></thead><tbody>'+
+    ws.map(function(w){ return '<tr class="click" data-w="'+w.id+'"'+(w.active?'':' style="opacity:.5"')+'><td class="num">'+w.no+'</td><td><b>'+esc(wName(w))+'</b></td><td>'+(w.role==='picker'?'Picker':'Sorter')+'</td><td class="hide-m">'+(w.pay==='day'?'Day':'Contract')+'</td><td class="hide-m">'+esc(teamName(w.team))+'</td><td>'+(w.uid?'<span class="tag g">Linked</span>':(w.role==='picker'?'<span class="tag a">No band</span>':'<span class="mute small">n/a</span>'))+'</td><td class="hide-m">'+(w.active?'Active':'Left')+'</td></tr>'; }).join('')+
+    '</tbody></table></div><label class="small" style="display:inline-flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="wAll"'+(showAll?' checked':'')+'> Show workers who have left</label></div>';
+  h+='<div class="grid g2"><div class="card"><h3>Pay and bins</h3><div class="fr">'+
+    '<div><label class="f">Rate per bag (R)</label><input type="number" step="0.05" min="0" id="sRate" value="'+st.ratePerBag+'"></div>'+
+    '<div><label class="f">Bags per bin</label><input type="number" min="20" max="80" id="sBpb" value="'+st.bagsPerBin+'"></div>'+
+    '<div><label class="f">Ignore a repeat tap within (minutes)</label><input type="number" min="0" max="15" id="sRep" value="'+st.repeatMin+'"></div></div>'+
+    '<div class="acts"><button class="btn p" id="sSave1">Save</button></div></div>';
+  h+='<div class="card"><h3>Picking day</h3><div class="small mute">Used for the bins estimate. Breaks are the gaps between sessions.</div>'+
+    st.sessions.map(function(s,i){ return '<div class="fr"><div><label class="f">Session '+(i+1)+' starts</label><input type="time" data-ss="'+i+'|0" value="'+s[0]+'"></div><div><label class="f">ends</label><input type="time" data-ss="'+i+'|1" value="'+s[1]+'"></div></div>'; }).join('')+
+    '<div class="fr">'+st.teams.map(function(t,i){ return '<div><label class="f">Team '+(i+1)+' name</label><input type="text" data-tn="'+i+'" value="'+esc(t.name)+'"></div>'; }).join('')+'</div>'+
+    '<div class="acts"><button class="btn p" id="sSave2">Save</button></div></div></div>';
+  var audit=Store.all('audit').sort(function(a,b){return b.t-a.t;}).slice(0,40);
+  h+='<div class="card"><h3>Change log</h3><div class="small mute" style="margin-bottom:6px">Every correction, loan, bin entry and setting change, with who and when.</div>'+
+    audit.map(function(a){ var d=new Date(a.t); return '<div class="list-row small"><span class="mute num" style="width:96px;flex:none">'+d.getDate()+' '+MON[d.getMonth()]+' '+hm(a.t)+'</span><b style="width:70px;flex:none">'+esc(a.who)+'</b><span>'+esc(a.what)+'</span></div>'; }).join('')+'</div>';
+  h+='<div class="card" style="border-style:dashed"><h3>Prototype</h3><div class="mute small">Version '+APP_VERSION+'. Demo data only, kept in this browser ('+Store.sizeKb()+' KB). The demo data starts fresh each day. '+(CLOCK.pinned!=null?'The demo clock is pinned at '+minToHm(CLOCK.pinned)+' because it is outside picking hours.':'')+'</div><div class="acts" style="justify-content:flex-start"><button class="btn w" id="reseed">Reset demo data</button></div></div>';
+  el.innerHTML=h;
+  $('wQ').oninput=function(){ VIEW.wQ=this.value; var p=this.selectionStart; route(); var n=$('wQ'); n.focus(); n.setSelectionRange(p,p); };
+  $('wAll').onchange=function(){ VIEW.wAll=this.checked; route(); };
+  $('addW').onclick=function(){ workerModal(null); };
+  el.querySelectorAll('tr[data-w]').forEach(function(r){ r.onclick=function(){ workerModal(r.getAttribute('data-w')); }; });
+  $('sSave1').onclick=function(){ var s=JSON.parse(JSON.stringify(st)), o=[st.ratePerBag,st.bagsPerBin,st.repeatMin];
+    s.ratePerBag=Math.max(0,parseFloat($('sRate').value)||0); s.bagsPerBin=Math.max(1,parseInt($('sBpb').value,10)||45); s.repeatMin=Math.max(0,parseFloat($('sRep').value)||0);
+    Store.setSettings(s,ME.name,'Settings: rate '+R(o[0])+' → '+R(s.ratePerBag)+', bags/bin '+o[1]+' → '+s.bagsPerBin+', repeat '+o[2]+' → '+s.repeatMin+' min'); toast('Saved'); };
+  $('sSave2').onclick=function(){ var s=JSON.parse(JSON.stringify(st));
+    el.querySelectorAll('[data-ss]').forEach(function(i){ var p=i.getAttribute('data-ss').split('|'); if (i.value) s.sessions[+p[0]][+p[1]]=i.value; });
+    el.querySelectorAll('[data-tn]').forEach(function(i){ s.teams[+i.getAttribute('data-tn')].name=i.value.trim()||s.teams[+i.getAttribute('data-tn')].name; });
+    Store.setSettings(s,ME.name,'Picking sessions and team names updated'); toast('Saved'); };
+  $('reseed').onclick=function(){ modal('<h2>Reset demo data?</h2><p>Starts the prototype again with fresh demo pickers and scans. Anything you typed in will be gone.</p><div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn w" data-a="ok">Reset</button></div>',
+    { ok:function(){ closeModal(); seed(); route(); toast('Demo data reset'); } }); };
+};
+
+function workerModal(id){
+  var w=id?JSON.parse(JSON.stringify(worker(id))):{id:'w'+uid(),no:'',first:'',last:'',role:'picker',pay:'day',team:'T1',uid:'',oldUids:[],active:true};
+  var nfc='NDEFReader' in window;
+  var opt=function(k,v,l){ return '<option value="'+v+'"'+(w[k]===v?' selected':'')+'>'+l+'</option>'; };
+  modal('<h2>'+(id?esc(wName(w)):'New worker')+'</h2><div class="fr">'+
+    '<div><label class="f">Number</label><input type="number" id="wk_no" value="'+esc(w.no)+'" inputmode="numeric"></div>'+
+    '<div><label class="f">Name</label><input type="text" id="wk_first" value="'+esc(w.first)+'"></div>'+
+    '<div><label class="f">Surname</label><input type="text" id="wk_last" value="'+esc(w.last)+'"></div>'+
+    '<div><label class="f">Work</label><select id="wk_role">'+opt('role','picker','Picker')+opt('role','sorter','Sorter')+'</select></div>'+
+    '<div><label class="f">Paid</label><select id="wk_pay">'+opt('pay','day','Day worker')+opt('pay','contract','Contract')+'</select></div>'+
+    '<div><label class="f">Team</label><select id="wk_team">'+S().teams.map(function(t){return opt('team',t.id,esc(t.name));}).join('')+'</select></div></div>'+
+    '<div class="card" style="background:var(--soft);box-shadow:none;margin-top:14px"><h3>Band</h3><div id="bandNow" class="small" style="margin-bottom:8px">'+(w.uid?'Linked: <b>'+esc(w.uid)+'</b>'+(w.oldUids&&w.oldUids.length?' <span class="mute">(old: '+w.oldUids.map(esc).join(', ')+')</span>':''):'<span class="mute">No band linked.</span>')+'</div>'+
+    (nfc?'<button class="btn p" data-a="read">'+(w.uid?'Replace band: tap the new band':'Tap a band on this phone')+'</button>':'<div class="small mute">This device cannot read bands (only Android phones with Chrome can, like Fanus\'s Samsung or the FORT 1). Type the band number, or link it on the FORT 1.</div>')+
+    '<label class="f">Or type the band number</label><input type="text" id="wk_uid" value="'+esc(w.uid)+'" placeholder="e.g. 04:AE:33:4A:A3:0F:90"></div>'+
+    '<label class="small" style="display:inline-flex;gap:6px;align-items:center;margin-top:12px"><input type="checkbox" id="wk_active"'+(w.active?' checked':'')+'> Active (untick when the worker leaves; their history stays)</label>'+
+    '<div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Save</button></div>',
+    { read:function(btn){
+        btn.textContent='Hold the band against the back of the phone…';
+        try { var r=new NDEFReader(); r.scan().then(function(){ r.onreading=function(ev){ $('wk_uid').value=normUid(ev.serialNumber); btn.textContent='Band read ✓'; }; })
+          .catch(function(e){ btn.textContent='Could not start NFC: '+(e.message||e.name); }); } catch(e){ btn.textContent='NFC error'; } },
+      ok:function(){
+        var no=parseInt($('wk_no').value,10), first=$('wk_first').value.trim(), last=$('wk_last').value.trim(), band=normUid($('wk_uid').value);
+        if (!no) return toast('Give the worker a number');
+        if (!first) return toast('Enter a name');
+        var clash=Store.where('workers',function(x){ return x.id!==w.id && x.active && x.no===no; })[0];
+        if (clash) return toast('Number '+no+' is already '+wName(clash));
+        if (band){ var bc=Store.where('workers',function(x){ return x.id!==w.id && x.uid===band; })[0]; if (bc) return toast('That band is already linked to '+wName(bc)+' #'+bc.no); }
+        var old=worker(w.id), msg=[];
+        if (old && old.uid && old.uid!==band){ w.oldUids=(w.oldUids||[]).concat([old.uid]); msg.push('band replaced'); }
+        w.no=no; w.first=first; w.last=last; w.role=$('wk_role').value; w.pay=$('wk_pay').value; w.team=$('wk_team').value; w.uid=band; w.active=$('wk_active').checked;
+        Store.put('workers',w); Store.log(ME.name,(old?'Updated ':'Added ')+wName(w)+' #'+no+(msg.length?' ('+msg.join(', ')+')':'')+(band&&(!old||old.uid!==band)?', band '+band:''));
+        closeModal(); route(); toast('Saved'); } });
+}
+
+/* =====================================================================
+   SCANNER (what the team lead sees on the FORT 1)
+   ===================================================================== */
+var Scanner=(function(){
+  var team=null, block=null, scanning=false, lastRead={uid:'',t:0}, kp='', audio=null, linkUid='', timer=null, wake=null;
+  function show(color,a,b,c,d,keep){ $('sp').style.background=color||''; $('s1').textContent=a||''; $('s2').textContent=b||''; $('s3').textContent=c==null?'':c; $('s4').textContent=d||''; clearTimeout(timer); if (keep) timer=setTimeout(idle,keep); }
+  function myCount(){ return Store.where('pickerDays',function(p){return p.date===TODAY() && p.team===team;}).reduce(function(a,p){return a+bagsOf(p);},0); }
+  function idle(){ if (!scanning) return show('', 'SANDRIVIER', 'Press START', '', 'The screen stays on while scanning.'); show('', 'READY', 'Tap a band', '', myCount()+' bags for '+teamName(team)+' today'); }
+  function tone(f,ms,w){ if (!audio) return; var o=audio.createOscillator(), g=audio.createGain(); o.frequency.value=f; o.type='square'; g.gain.value=.25; o.connect(g); g.connect(audio.destination); var t=audio.currentTime+(w||0); o.start(t); o.stop(t+ms/1000); }
+  function fb(k){ if (k==='ok'){ tone(1500,120); navigator.vibrate&&navigator.vibrate(120); } else if (k==='dup'){ tone(500,150); tone(500,150,.25); navigator.vibrate&&navigator.vibrate([150,100,150]); } else { tone(250,600); navigator.vibrate&&navigator.vibrate(600); } }
+  function head(){ $('scTeam').textContent=teamName(team); var b=blockById(block); $('scBlock').textContent=b?b.name+' · '+vShort(b.variety):'No block'; }
+
+  function count(w,method){
+    var now=NOW().getTime(), today=TODAY(), pd=pdFor(today,w.id), win=S().repeatMin*60000;
+    var status = pd && pd.last && now-pd.last<win ? 'DUP' : 'OK';
+    Store.put('scans',{id:uid(),t:now,date:today,team:team,workerId:w.id,method:method,status:status,device:ME.name},true);
+    if (status==='OK'){
+      pd=pd||{id:today+'|'+w.id,date:today,workerId:w.id,team:w.team,block:block,bags:0,manual:0,adj:0,first:null,last:null};
+      pd.bags++; if (method==='MANUAL') pd.manual++; if (!pd.first) pd.first=now; pd.last=now; Store.put('pickerDays',pd);
+      fb('ok'); show('#15803d','BAG COUNTED'+(method==='MANUAL'?' (typed)':''), wName(w)+'  #'+w.no, bagsOf(pd), 'bags today', 2500);
+    } else {
+      Store.flush(); fb('dup'); var ago=Math.round((now-pd.last)/1000);
+      show('#b45309','NOT COUNTED', wName(w)+'  #'+w.no, '', 'Counted '+ago+' s ago. Wait '+Math.ceil((win-(now-pd.last))/1000)+' s.', 3500);
+    }
+    return status;
+  }
+  function onBand(serial){
+    var u=normUid(serial); if (!u) return; var now=Date.now();
+    if (u===lastRead.uid && now-lastRead.t<3000) return; lastRead={uid:u,t:now};
+    if ($('ovLink').classList.contains('on')) return;
+    var w=Store.where('workers',function(x){ return x.active && x.uid===u; })[0];
+    if (w) return count(w,'NFC');
+    Store.put('scans',{id:uid(),t:NOW().getTime(),date:TODAY(),team:team,uid:u,method:'NFC',status:'UNKNOWN',device:ME.name});
+    fb('bad'); show('#1d4ed8','UNKNOWN BAND','Not linked','', 'Band '+u, 0); linkUid=u;
+    $('lUid').textContent='Band '+u; $('lNo').value=''; $('lMsg').textContent=''; $('lReplace').classList.add('hide'); open('ovLink');
+  }
+  function start(){
+    if (audio===null){ try{ audio=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audio=false; } } if (audio&&audio.resume) audio.resume();
+    if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(function(l){wake=l;}).catch(function(){});
+    if (!('NDEFReader' in window)){ scanning=true; $('scStart').style.display='none'; return show('', 'NO NFC ON THIS DEVICE', 'Use the demo button', '', 'On the FORT 1 a band tap counts a bag.', 0); }
+    try { var r=new NDEFReader(); r.scan().then(function(){ scanning=true; $('scStart').style.display='none'; idle(); })
+      .catch(function(e){ show('#b91c1c','NFC NOT STARTED',e.name||'Error','',(e.message||'')+' Turn on NFC and press START.',0); });
+      r.onreading=function(ev){ onBand(ev.serialNumber); }; r.onreadingerror=function(){ fb('bad'); show('#b91c1c','COULD NOT READ BAND','Hold it still and try again','','',2500); };
+    } catch(e){ show('#b91c1c','NFC ERROR',e.name||'','',e.message||'',0); }
+  }
+  function open(id){ $(id).classList.add('on'); } function close(id){ $(id).classList.remove('on'); }
+  function askBlock(){
+    var td=Store.get('teamDays',TODAY()+'|'+team);
+    $('dayInfo').textContent=teamName(team)+' · '+nice(TODAY());
+    $('dayBlock').innerHTML=Store.all('blocks').sort(function(a,b){return +a.id-+b.id;}).map(function(b){ return '<option value="'+b.id+'"'+(td&&td.block===b.id?' selected':'')+'>'+esc(b.name)+' · '+esc(vShort(b.variety))+'</option>'; }).join('');
+    open('ovDay');
+  }
+  $('dayOk').onclick=function(){ block=$('dayBlock').value; var id=TODAY()+'|'+team, td=Store.get('teamDays',id);
+    if (!td || td.block!==block){ Store.put('teamDays',{id:id,date:TODAY(),team:team,block:block}); Store.log(ME.name, teamName(team)+' picking '+blockById(block).name+' on '+TODAY()); }
+    close('ovDay'); head(); idle(); };
+  // keypad
+  $('keys').innerHTML=['1','2','3','4','5','6','7','8','9','⌫','0','C'].map(function(x){return '<button data-k="'+x+'">'+x+'</button>';}).join('');
+  $('keys').onclick=function(e){ var x=e.target.getAttribute('data-k'); if (!x) return; if (x==='⌫') kp=kp.slice(0,-1); else if (x==='C') kp=''; else if (kp.length<4) kp+=x; $('kpd').textContent=kp; };
+  $('scManual').onclick=function(){ kp=''; $('kpd').textContent=''; $('kMsg').textContent=''; open('ovKey'); };
+  $('kDone').onclick=function(){ close('ovKey'); idle(); };
+  $('kOk').onclick=function(){ var w=Store.where('workers',function(x){return x.active && x.role==='picker' && String(x.no)===kp;})[0], m=$('kMsg');
+    if (!w){ fb('bad'); m.style.color='#f87171'; m.textContent='Number '+(kp||'?')+' is not on the list'; }
+    else { var s=count(w,'MANUAL'); m.style.color=s==='OK'?'#4ade80':'#fbbf24'; m.textContent=(s==='OK'?'Counted: ':'NOT counted (too soon): ')+wName(w)+' #'+w.no+', '+bagsOf(pdFor(TODAY(),w.id))+' bags today'; }
+    kp=''; $('kpd').textContent=''; };
+  // link band
+  $('lCancel').onclick=function(){ close('ovLink'); idle(); };
+  function link(replace){ var no=$('lNo').value.trim(), w=Store.where('workers',function(x){return x.active && String(x.no)===no;})[0];
+    if (!w){ $('lMsg').textContent='Number '+(no||'?')+' is not on the list. Fanus adds new workers in Settings.'; return; }
+    if (w.uid && !replace){ $('lMsg').textContent=wName(w)+' #'+no+' already has a band. Is this a replacement for a lost or broken band?'; $('lReplace').classList.remove('hide'); return; }
+    if (w.uid) w.oldUids=(w.oldUids||[]).concat([w.uid]); w.uid=linkUid; Store.put('workers',w); Store.log(ME.name,(replace?'Replaced band for ':'Linked band to ')+wName(w)+' #'+no+': '+linkUid);
+    close('ovLink'); fb('ok'); show('#15803d', replace?'BAND REPLACED':'BAND LINKED', wName(w)+'  #'+no, '', 'Tap again to count a bag.', 3000); }
+  $('lOk').onclick=function(){ link(false); }; $('lReplace').onclick=function(){ link(true); };
+  // today
+  $('scToday').onclick=function(){ var pds=Store.where('pickerDays',function(p){return p.date===TODAY() && p.team===team && bagsOf(p)>0;}).sort(function(a,b){return bagsOf(b)-bagsOf(a);});
+    var e=teamEstimate(TODAY(),team);
+    $('stBody').innerHTML='<div style="color:#94a3b8;margin-bottom:8px">'+fmt(e.bags)+' bags · '+fmt(e.binsSoFar,0)+' bins so far'+(e.endBins!=null&&e.state==='live'?' · about '+fmt(e.endBins,0)+' by '+minToHm(dayEnd()):'')+'</div><table><tr><th>Picker</th><th style="text-align:right">Bags</th><th style="text-align:right">Last</th></tr>'+
+      pds.map(function(p){ var w=worker(p.workerId); return '<tr><td>'+esc(wName(w))+' <span style="color:#94a3b8">#'+w.no+'</span></td><td style="text-align:right">'+bagsOf(p)+'</td><td style="text-align:right">'+(p.last?hm(p.last):'')+'</td></tr>'; }).join('')+'</table>';
+    open('ovSToday'); };
+  $('stClose').onclick=function(){ close('ovSToday'); };
+  $('scMenu').onclick=function(){ $('smInfo').innerHTML=esc(ME.name)+' · '+esc(teamName(team))+'<br>Version '+APP_VERSION+'<br>Prototype: scans are saved on this device only.'; open('ovSMenu'); };
+  $('smClose').onclick=function(){ close('ovSMenu'); };
+  $('smBlock').onclick=function(){ close('ovSMenu'); askBlock(); };
+  $('smOut').onclick=function(){ close('ovSMenu'); if (ME.role==='scanner') signOut(); else { Scanner.close(); route(); } };
+  $('scStart').onclick=start;
+  $('scDemo').onclick=function(){ if (!scanning){ scanning=true; $('scStart').style.display='none'; }
+    var ws=Store.where('workers',function(x){return x.active && x.role==='picker' && x.team===team && x.uid;});
+    if (Math.random()<0.03) return onBand('04:00:DE:AD:'+pad(Math.floor(Math.random()*90))+':00:01');
+    var w=ws[Math.floor(Math.random()*ws.length)]; if (w) onBand(w.uid); };
+  return {
+    open:function(){ team = ME.team || VIEW.scanTeam || 'T1';
+      if (ME.role==='office'){ team = VIEW.scanTeam || 'T1'; }
+      $('smOut').textContent = ME.role==='office' ? 'Back to the office screens' : 'Sign out';
+      $('scan').classList.add('on'); scanning=false; $('scStart').style.display=''; head();
+      var td=Store.get('teamDays',TODAY()+'|'+team); if (td){ block=td.block; head(); idle(); } else { idle(); askBlock(); } },
+    close:function(){ ['scan','ovDay','ovKey','ovLink','ovSToday','ovSMenu'].forEach(close); scanning=false; }
+  };
+})();
+
+/* =====================================================================
+   start
+   ===================================================================== */
+setClock();
+if (!Store.init() || !Store.get('meta','seed') || Store.get('meta','seed').date!==TODAY()) seed();
+Store.onChange(function(){ rerender(); });
+setInterval(function(){ setClock(); if (VIEW.current==='today') rerender(); }, 60000);
+try { var su=sessionStorage.getItem('ht-user'); if (su){ var u=USERS.filter(function(x){return x.id===su;})[0]; if (u) signIn(u); } } catch(e){}
+})();
+</script>
+</body>
+</html>

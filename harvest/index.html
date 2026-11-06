@@ -7,6 +7,7 @@
 <title>Harvest Tracker</title>
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="icon" href="../icon-192.png">
+<script src="config.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <style>
 :root{
@@ -119,6 +120,11 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
 #gate .who{display:grid;gap:10px;margin-top:22px}
 #gate button{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:14px;padding:14px 16px;text-align:left;font-size:16px;font-weight:650;cursor:pointer}
 #gate button span{display:block;font-size:13px;font-weight:400;opacity:.75}
+.login{margin-top:22px}
+.login label{display:block;font-size:13px;opacity:.8;margin:12px 0 4px}
+.login input{width:100%;border:1px solid rgba(255,255,255,.3);background:rgba(255,255,255,.08);color:#fff;border-radius:12px;padding:13px 14px;font-size:17px}
+#gate .login button{width:100%;margin-top:18px;background:var(--pear);color:#2b2608;border:0;text-align:center;font-size:17px}
+.pill.ok{background:rgba(74,222,128,.18)} .pill.wait{background:rgba(251,191,36,.25)} .pill.off{background:rgba(248,113,113,.3)}
 
 /* scanner (dark, high contrast, big) */
 #scan{position:fixed;inset:0;z-index:60;background:#0f172a;color:#f8fafc;display:none;flex-direction:column}
@@ -163,17 +169,22 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
 <div id="gate">
   <div class="box">
     <h1><span style="width:30px;height:30px;border-radius:50% 50% 50% 0;background:var(--pear);transform:rotate(-45deg);display:inline-block"></span>Harvest Tracker</h1>
-    <p style="opacity:.8;margin:8px 0 0">Sandrivier, Barrydale. Prototype with demo data: nothing here is real, and nothing leaves this device.</p>
-    <div class="who" id="who"></div>
-    <p class="small" style="opacity:.6;margin-top:18px">The real app will use a proper login (email and password). In the prototype you just pick who you are.</p>
+    <p style="opacity:.8;margin:8px 0 0">Sandrivier, Barrydale</p>
+    <form id="login" class="login" autocomplete="on">
+      <label>Email</label><input type="email" id="lgEmail" autocomplete="username" required>
+      <label>Password</label><input type="password" id="lgPw" autocomplete="current-password" required>
+      <button type="submit" id="lgGo">Sign in</button>
+      <div id="lgMsg" class="small" style="min-height:20px;margin-top:10px;color:#fde68a"></div>
+      <a href="#" id="lgForgot" class="small" style="color:rgba(255,255,255,.7)">Forgot password</a>
+    </form>
+    <div id="gateMsg" class="hide" style="margin-top:22px;line-height:1.5"></div>
   </div>
 </div>
 
 <div class="top">
   <div class="top-row">
     <div class="brand"><i></i>Harvest Tracker</div>
-    <span class="pill demo">DEMO</span>
-    <span class="pill hide-m" id="clockPill"></span>
+    <span class="pill" id="syncPill">…</span>
     <span class="grow"></span>
     <button class="user" id="userBtn"></button>
   </div>
@@ -190,7 +201,8 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
     <span class="chip" id="scTeam"></span>
     <span class="chip" id="scBlock"></span>
     <span style="flex:1"></span>
-    <span class="chip good" id="scSync">All saved</span>
+    <span class="chip" id="scBatt"></span>
+    <span class="chip good" id="scSync">All sent</span>
   </div>
   <div id="sp">
     <div class="l1" id="s1">SANDRIVIER</div>
@@ -198,7 +210,7 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
     <div class="l3" id="s3"></div>
     <div class="l4" id="s4"></div>
     <button class="big" id="scStart">START</button>
-    <button class="demo-tap" id="scDemo">Demo: simulate a band tap</button>
+    <button class="demo-tap hide" id="scDemo">Test: simulate a band tap</button>
   </div>
   <div class="sbar">
     <button id="scManual">Type number</button>
@@ -243,16 +255,24 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
   <div class="row"><button class="p" id="smClose">Close</button></div>
 </div>
 
-<script>
+<script type="module">
 /* =====================================================================
-   Harvest Tracker prototype
-   - Store: the ONLY place that saves or loads. Prototype = this browser.
-     For the real app this one object is replaced by a Firebase version;
-     the screens below do not change.
+   Harvest Tracker
+   - Store: the ONLY place that saves or loads (Firebase Firestore, with an
+     offline copy on each device). Screens read from Store's memory copy.
+   - Access rules: firebase/firestore.rules (pay and loans: office only).
    ===================================================================== */
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
+import { getAuth, connectAuthEmulator, onAuthStateChanged, signInWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, query, where, orderBy, limit, increment, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 (function(){
 'use strict';
-var APP_VERSION = '0.1 prototype';
+// Firebase project (Kettel). Not a secret: the access rules protect the data.
+var FIREBASE_CONFIG = window.HT_CONFIG || null;
+var EMU = /[?&]emu=1/.test(location.search);
+var TEST = /[?&]test=1/.test(location.search);
+var ADMIN_EMAIL = 'wian@kettel.co.za';
+var APP_VERSION = '1.0';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -285,45 +305,82 @@ function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(
 function normUid(s){ var h=String(s||'').toUpperCase().replace(/[^0-9A-F]/g,''); return h.length<4?'':h.match(/.{1,2}/g).join(':'); }
 function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove('on');},2200); }
 
-/* ---------------- demo clock ----------------
-   Outside picking hours (or on a Sunday) the prototype pins the clock at
-   11:30 so the live screens have something to show. */
-var CLOCK = { pinned:null };
-function NOW(){
-  if (CLOCK.pinned==null) return new Date();
-  var d=new Date(); d.setHours(Math.floor(CLOCK.pinned/60), CLOCK.pinned%60, 0, 0); return d;
-}
+function NOW(){ return new Date(); }
 function TODAY(){ return ymd(NOW()); }
-function setClock(){
-  var d=new Date(), m=d.getHours()*60+d.getMinutes();
-  CLOCK.pinned = (d.getDay()===0 || m<7*60+30 || m>17*60) ? 11*60+30 : null;
-}
 
 /* =====================================================================
    STORE (prototype version: localStorage)
    ===================================================================== */
 var Store = (function(){
-  var KEY='harvest-proto-v1', db=null, saveT=null, listeners=[];
-  var COLS=['workers','blocks','bloom','teamDays','scans','pickerDays','bins','loans','attendance','paidWeeks','audit','meta'];
-  function blank(){ var o={settings:null}; COLS.forEach(function(c){ o[c]={}; }); return o; }
-  function load(){ try{ var s=localStorage.getItem(KEY); db=s?JSON.parse(s):null; }catch(e){ db=null; } return !!db; }
-  function persist(){ clearTimeout(saveT); saveT=setTimeout(function(){ try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){ toast('Could not save on this device (storage full?)'); } },150); }
-  function changed(col){ persist(); listeners.forEach(function(f){ f(col); }); }
+  var fb=null, db=null, mem={}, ready={}, subs=[], listeners=[], pending=0, failed=0, lastErr='';
+  var COLS=['settings','workers','blocks','bloom','teamDays','pickerDays','bins','loans','attendance','paidWeeks','audit','users','dayFlags'];
+  COLS.forEach(function(c){ mem[c]={}; });
+  function clean(o){ var x={}; for (var k in o) if (k!=='id' && o[k]!==undefined) x[k]=o[k]; return x; }
+  function notify(col){ listeners.forEach(function(f){ f(col); }); }
+  function track(p, what){
+    pending++; notify('_sync');
+    return p.then(function(){ pending--; notify('_sync'); }).catch(function(e){ pending--; failed++; lastErr=(e&&e.code)||String(e); console.error(what,e);
+      toast(e&&e.code==='permission-denied' ? 'Not allowed: '+what : 'Could not save: '+what); notify('_sync'); });
+  }
+  // Firestore cannot store lists inside lists, so picking sessions are saved as {from,to}
+  function toDb(col,o){ var x=clean(o); if (col==='settings' && x.sessions) x.sessions=x.sessions.map(function(v){ return {from:v[0],to:v[1]}; }); return x; }
+  function fromDb(col,d){ if (col==='settings' && d.sessions) d.sessions=d.sessions.map(function(v){ return Array.isArray(v)?v:[v.from,v.to]; }); return d; }
+  function subscribe(col, q, tries){
+    ready[col]=false; mem[col]={}; tries=tries||0;
+    var u=onSnapshot(q, function(snap){
+      snap.docChanges().forEach(function(c){ if (c.type==='removed') delete mem[col][c.doc.id]; else { var d=fromDb(col,c.doc.data()); d.id=c.doc.id; mem[col][c.doc.id]=d; } });
+      ready[col]=true; notify(col);
+    }, function(e){ console.warn('listen '+col, e.code); lastErr=e.code||'';
+      // access can arrive a moment after sign-in: try again a few times
+      if (tries<5) setTimeout(function(){ if (subs.indexOf(u)>=0){ subs.splice(subs.indexOf(u),1); subscribe(col,q,tries+1); } }, 1500*(tries+1));
+      else { ready[col]=true; notify(col); } });
+    subs.push(u);
+  }
   return {
-    init:function(){ return load(); },
-    reset:function(){ db=blank(); },
-    flush:function(){ clearTimeout(saveT); try{ localStorage.setItem(KEY, JSON.stringify(db)); }catch(e){} },
-    wipe:function(){ try{ localStorage.removeItem(KEY); }catch(e){} db=null; },
-    settings:function(){ return db.settings; },
-    setSettings:function(s,who,what,quiet){ db.settings=s; if(what) this.log(who,what); if (quiet) persist(); else changed('settings'); },
-    all:function(col){ var o=db[col], a=[]; for (var k in o) a.push(o[k]); return a; },
-    get:function(col,id){ return db[col][id]||null; },
-    put:function(col,obj,quiet){ db[col][obj.id]=obj; if(!quiet) changed(col); else persist(); return obj; },
-    del:function(col,id){ delete db[col][id]; changed(col); },
+    init:function(app){ fb=app;
+      db = initializeFirestore(app, { localCache: persistentLocalCache({ tabManager: persistentMultipleTabManager() }) });
+      if (EMU) connectFirestoreEmulator(db, location.hostname, 8080);
+      return db; },
+    db:function(){ return db; },
+    // what each role keeps a live copy of
+    start:function(role){
+      this.stop();
+      var today=TODAY(), from=addDays(today,-150);
+      subscribe('settings', collection(db,'settings'));
+      subscribe('workers', collection(db,'workers'));
+      subscribe('blocks', collection(db,'blocks'));
+      if (role==='scanner'){
+        subscribe('teamDays', query(collection(db,'teamDays'), where('date','==',today)));
+        subscribe('pickerDays', query(collection(db,'pickerDays'), where('date','==',today)));
+        return;
+      }
+      subscribe('teamDays', query(collection(db,'teamDays'), where('date','>=',from)));
+      subscribe('pickerDays', query(collection(db,'pickerDays'), where('date','>=',from)));
+      ['bloom','bins','loans','attendance','paidWeeks','dayFlags'].forEach(function(c){ subscribe(c, collection(db,c)); });
+      subscribe('audit', query(collection(db,'audit'), orderBy('t','desc'), limit(150)));
+      if (role==='admin') subscribe('users', collection(db,'users'));
+    },
+    stop:function(){ subs.forEach(function(u){ u(); }); subs=[]; ready={}; COLS.forEach(function(c){ mem[c]={}; }); },
+    isReady:function(){ for (var k in ready) if (!ready[k]) return false; return true; },
+    settings:function(){ return mem.settings.main || null; },
+    setSettings:function(s,who,what){ mem.settings.main=s; track(setDoc(doc(db,'settings','main'), toDb('settings',s)), 'settings'); if (what) this.log(who,what); notify('settings'); },
+    all:function(col){ var o=mem[col], a=[]; for (var k in o) a.push(o[k]); return a; },
+    get:function(col,id){ return mem[col][id]||null; },
     where:function(col,fn){ return this.all(col).filter(fn); },
-    log:function(who,what){ var e={id:uid(),t:Date.now(),who:who,what:what}; db.audit[e.id]=e; persist(); },
+    put:function(col,obj){ mem[col][obj.id]=obj; track(setDoc(doc(db,col,obj.id), clean(obj)), col); notify(col); return obj; },
+    // merge some fields (no counters)
+    update:function(col,id,fields){ var o=mem[col][id]; if (o) for (var k in fields) o[k]=fields[k]; track(setDoc(doc(db,col,id), fields, {merge:true}), col); notify(col); },
+    // add to counters safely, even when two devices count at the same time
+    bump:function(col,id,incs,sets){ var f={}, k; for (k in (sets||{})) f[k]=sets[k];
+      for (k in incs){ var parts=k.split('.'); if (parts.length===2){ f[parts[0]]=f[parts[0]]||{}; f[parts[0]][parts[1]]=increment(incs[k]); } else f[k]=increment(incs[k]); }
+      track(setDoc(doc(db,col,id), f, {merge:true}), col); },
+    add:function(col,obj){ var id=obj.id||uid(); track(setDoc(doc(db,col,id), clean(obj)), col); return id; },
+    del:function(col,id){ delete mem[col][id]; track(deleteDoc(doc(db,col,id)), col); notify(col); },
+    log:function(who,what){ var id=Date.now()+'-'+Math.random().toString(36).slice(2,7); var e={t:Date.now(),who:who,what:what};
+      mem.audit[id]=Object.assign({id:id},e); track(setDoc(doc(db,'audit',id), e), 'change log'); },
+    local:function(col,obj){ mem[col][obj.id]=obj; notify(col); },
     onChange:function(f){ listeners.push(f); },
-    sizeKb:function(){ try{ return Math.round(JSON.stringify(db).length/1024); }catch(e){ return 0; } }
+    sync:function(){ return {pending:pending, failed:failed, err:lastErr}; }
   };
 })();
 
@@ -380,20 +437,14 @@ function teamEstimate(date, team){
 /* =====================================================================
    Seed: real farm reference data + demo pickers and scans
    ===================================================================== */
-var FIRST=['Sipho','Thandiwe','Johannes','Elna','Andile','Petrus','Nomsa','Jacobus','Lindiwe','Willem','Zanele','Hendrik','Anele','Magdalena','Bongani','Christo','Ayanda','Riaan','Nandi','Frans','Lerato','Koos','Busisiwe','Gert','Precious','Dawid','Sizwe','Annatjie','Themba','Sarel','Mpho','Elsabe','Vusi','Marthinus','Nosipho','Jan','Khanyisa','Piet','Unathi','Hennie','Lwazi','Sannie','Kagiso','Danie','Yonela','Barend','Thabo','Ria','Siyabonga','Klaas','Ntombi','Stefan','Odwa','Lettie','Mandla','Gerrit'];
-var LAST=['Adams','Jacobs','Mokoena','Pietersen','Daniels','Ndlovu','Fortuin','Booysen','Khumalo','Hendricks','Afrika','Mthembu','Plaatjies','Swartz','Dlamini','Cupido','Malgas','Nkosi','Arendse','Februarie','Mentoor','Zulu','Stuurman','Koopman','Sithole','Abrahams','Lottering','Baartman','Tshabalala','Isaacs'];
-
-function seed(){
-  Store.reset();
-  setClock();
-  var today=TODAY();
-  Store.setSettings({
-    farm:'Sandrivier', ratePerBag:2.00, bagsPerBin:45, repeatMin:2,
-    sessions:[['06:30','08:00'],['09:00','12:00'],['13:00','17:00']],
-    teams:[{id:'T1',name:'Team 1'},{id:'T2',name:'Team 2'}],
-    season:'2027', seasonLabel:'2026/27'
-  },null,null,true);
-  // blocks (Block Master v0.2, aggregated 1 to 8 as Fanus now reports them)
+var DEFAULT_SETTINGS = {
+  farm:'Sandrivier', ratePerBag:2.00, bagsPerBin:45, repeatMin:2,
+  sessions:[['06:30','08:00'],['09:00','12:00'],['13:00','17:00']],
+  teams:[{id:'T1',name:'Team 1'},{id:'T2',name:'Team 2'}],
+  season:'2027', seasonLabel:'2026/27'
+};
+// Sandrivier reference data: Block Master v0.2 (aggregated 1 to 8) and Fanus's full bloom sheets
+function loadReference(){
   [
     {id:'1',name:'Blok 1',variety:'PTR',planted:'2012',trees:3068,ha:2.0,rows:'',spacing:'4.8 x 1.5 m',soil:'Shaley',ridged:'No',notes:'Extra trees vs Blok 2'},
     {id:'2',name:'Blok 2',variety:'PTR',planted:'2013',trees:2891,ha:2.0,rows:'',spacing:'4.8 x 1.5 m',soil:'Sandy',ridged:'No',notes:''},
@@ -403,97 +454,79 @@ function seed(){
     {id:'6',name:'Blok 6',variety:'EBC',planted:'2018',trees:3000,ha:2.0,rows:'',spacing:'4.5 x 1.5 m',soil:'Shaley',ridged:'Yes',notes:''},
     {id:'7',name:'Blok 7',variety:'FRL',planted:'2018',trees:3280,ha:2.0,rows:'',spacing:'4.5 x 1.5 m',soil:'Shaley',ridged:'Yes',notes:''},
     {id:'8',name:'Blok 8',variety:'FRL',planted:'2019/2020',trees:4478,ha:3.0,rows:'',spacing:'4.5 x 1.5 m',soil:'Shaley',ridged:'Yes',notes:'Was 8A + 8B'}
-  ].forEach(function(b){ Store.put('blocks',b,true); });
-  // full bloom dates (Fanus's Volblomdatums sheets)
+  ].forEach(function(b){ Store.put('blocks',b); });
   var bloom={2020:{3:'09-18',6:'09-18',P:'10-12'},2021:{3:'09-22',6:'09-27',P:'10-14'},2022:{3:'09-23',6:'09-23',P:'10-12'},
     2023:{3:'09-08',6:'09-06',7:'09-14',8:'09-14',P:'09-29'},2024:{3:'09-23',6:'09-25',7:'09-30',8:'09-30',P:'10-08'},
     2025:{3:'09-08',6:'09-08',7:'09-12',8:'09-12',P:'09-29'},2026:{3:'09-04',6:'09-04',7:'09-10',8:'09-10',P:'09-23'}};
   Object.keys(bloom).forEach(function(y){ var r=bloom[y];
     ['1','2','3','4','5','6','7','8'].forEach(function(b){ var v=r[b] || ((b==='1'||b==='2'||b==='4'||b==='5')?r.P:null);
-      if (v) Store.put('bloom',{id:y+'|'+b,year:y,block:b,date:y+'-'+v},true); }); });
-  // workers: Team 1 = day workers, Team 2 = contract, plus sorters
-  var n=0;
-  function mk(no,role,pay,team){ var w={id:'w'+no,no:no,first:FIRST[n%FIRST.length],last:LAST[(n*7)%LAST.length],role:role,pay:pay,team:team,uid:'',oldUids:[],active:true}; n++;
-    w.uid = role==='picker' ? normUid('04'+(0x100000+no*7919).toString(16)+'A3'+pad(no%97)) : ''; Store.put('workers',w,true); return w; }
-  for (var i=1;i<=25;i++) mk(i,'picker','day','T1');
-  for (i=51;i<=75;i++) mk(i,'picker','contract','T2');
-  for (i=91;i<=94;i++) mk(i,'sorter','day','T1');
-  var pickers=Store.where('workers',function(w){return w.role==='picker';});
-  pickers.forEach(function(w,k){ w.speed = 120 + ((k*37)%90) + (w.pay==='contract'?20:0); });   // bags per full day
-  // demo season: picking started 10 working days ago (Mon to Sat), all EBC so far
-  var days=[], d=today, guard=0;
-  while (days.length<10 && guard<30){ d=addDays(d,-1); guard++; if (parseYmd(d).getDay()!==0) days.unshift(d); }
-  var all=days.concat([today]);
-  all.forEach(function(date,di){
-    var isToday = date===today;
-    var b1 = di<6 ? '3' : '6', b2 = di<4 ? '6' : '3';
-    [['T1',b1],['T2',b2]].forEach(function(tb){ Store.put('teamDays',{id:date+'|'+tb[0],date:date,team:tb[0],block:tb[1]},true); });
-    var nowM = isToday ? minOf(NOW()) : dayEnd();
-    var dayBags=0;
-    pickers.forEach(function(w,k){
-      var rnd = 0.8 + ((k*13+di*17)%40)/100;                 // 0.80 to 1.19
-      if (!isToday && (k+di)%23===0) return;                  // someone absent
-      var perMin = w.speed*rnd/510;
-      var td=Store.get('teamDays',date+'|'+w.team);
-      var pd={id:date+'|'+w.id,date:date,workerId:w.id,team:w.team,block:td.block,bags:0,manual:0,adj:0,first:null,last:null};
-      var start = hmToMin('06:30') + ((k*3)%12), acc=((k*0.37)%1), base=parseYmd(date).getTime();
-      for (var m=start; m<nowM; m+=1){
-        if (!inSession(m)) continue;
-        acc += perMin;
-        if (acc>=1){ acc-=1;
-          var t = base + m*60000 + ((k*7+m)%50)*1000, manual = ((k+m)%97===0);
-          pd.bags++; if (manual) pd.manual++;
-          if (pd.first===null) pd.first=t; pd.last=t;
-          if (isToday){ var sid=uid(); Store.put('scans',{id:sid,t:t,date:date,team:w.team,workerId:w.id,method:manual?'MANUAL':'NFC',status:'OK',device:w.team==='T1'?'FORT 1 A':'FORT 1 B'},true);
-            if ((k*m)%211===0) Store.put('scans',{id:uid(),t:t+40000,date:date,team:w.team,workerId:w.id,method:'NFC',status:'DUP',device:'FORT 1'},true); }
-        }
-      }
-      if (pd.bags) Store.put('pickerDays',pd,true);
-      dayBags += pd.bags;
-    });
-    Store.where('workers',function(w){return w.role==='sorter';}).forEach(function(w,k){
-      if ((k+di)%9!==0) Store.put('attendance',{id:date+'|'+w.id,date:date,workerId:w.id,present:true},true); });
-    if (!isToday){
-      var tot = Math.round(dayBags/45*(0.96+((di*7)%9)/100)), exp = Math.round(tot*(0.52+((di*5)%11)/100));
-      Store.put('bins',{id:date+'|EBC',date:date,variety:'EBC',export:exp,juice:tot-exp,by:'Fanus',at:Date.now()},true);
-    }
-  });
-  // a couple of loans in the current and last week
-  var ws=weekStart(today), lw=addDays(ws,-7);
-  [[ws,'w3',150],[ws,'w11',200],[ws,'w19',100],[lw,'w3',100],[lw,'w7',250]].forEach(function(l){
-    Store.put('loans',{id:l[0]+'|'+l[1],week:l[0],workerId:l[1],amount:l[2],by:'Adolf'},true); });
-  Store.put('paidWeeks',{id:addDays(lw,-7),week:addDays(lw,-7),paidAt:Date.now(),by:'Adolf'},true);
-  Store.put('meta',{id:'seed',at:Date.now(),date:today},true);
-  Store.log('System','Demo data loaded');
-  Store.flush();
+      if (v) Store.put('bloom',{id:y+'|'+b,year:y,block:b,date:y+'-'+v}); }); });
+  Store.log(ME.name,'Loaded Sandrivier blocks and bloom dates 2020 to 2026');
 }
 
 /* =====================================================================
    Users (prototype sign in)
    ===================================================================== */
-var USERS=[
-  {id:'fanus',name:'Fanus',role:'office',desc:'Farm manager. Everything.'},
-  {id:'adolf',name:'Adolf',role:'office',desc:'Owner. Everything, records loans.'},
-  {id:'wian',name:'Wian',role:'office',desc:'Admin. Everything plus settings.'},
-  {id:'tl1',name:'Team lead 1',role:'scanner',team:'T1',desc:'FORT 1 scanner, Team 1 only.'},
-  {id:'tl2',name:'Team lead 2',role:'scanner',team:'T2',desc:'FORT 1 scanner, Team 2 only.'}
-];
-var ME=null;
-function signIn(u){
-  ME=u; try{ sessionStorage.setItem('ht-user',u.id); }catch(e){}
-  $('gate').style.display='none';
-  if (u.role==='scanner'){ Scanner.open(); return; }
-  $('userBtn').textContent=u.name+' ▾';
-  route();
+var ME=null, AUTH=null, UNSUB_ME=null;
+function gateMsg(html){ $('login').classList.toggle('hide', !!html); $('gateMsg').classList.toggle('hide', !html); $('gateMsg').innerHTML=html||''; }
+function showGate(){ $('gate').style.display='flex'; }
+function hideGate(){ $('gate').style.display='none'; }
+function roleLabel(r,team){ return r==='admin'?'Admin':r==='office'?'Office':r==='scanner'?'FORT 1 '+(team?teamName(team).replace(/^Team /,'team '):''):r==='pending'?'Waiting for access':'No access'; }
+function onUser(user){
+  if (UNSUB_ME){ UNSUB_ME(); UNSUB_ME=null; }
+  Store.stop(); Scanner.close(); ME=null;
+  if (!user){ gateMsg(''); showGate(); return; }
+  gateMsg('Signing in…');
+  var ref=doc(Store.db(),'users',user.uid);
+  UNSUB_ME = onSnapshot(ref, {includeMetadataChanges:true}, function(snap){
+    if (snap.metadata.hasPendingWrites) return;      // wait until the server has it, or the rules will not know us yet
+    if (!snap.exists()){
+      var isAdmin = (user.email||'').toLowerCase()===ADMIN_EMAIL;
+      setDoc(ref,{email:user.email, name:isAdmin?'Wian':(user.email||'').split('@')[0], role:isAdmin?'admin':'pending', created:Date.now()})
+        .catch(function(e){ gateMsg('Could not set up your account ('+esc(e.code||e)+'). <a href="#" id="gOut" style="color:#fff">Sign out</a>'); bindOut(); });
+      return;
+    }
+    var u=snap.data(), was=ME?ME.role+'|'+ME.team:null;
+    ME={uid:user.uid, email:user.email, name:u.name||user.email, role:u.role, team:u.team||'T1'};
+    if (u.role==='pending' || u.role==='disabled' || !u.role){
+      Store.stop(); Scanner.close();
+      gateMsg('<b>Signed in as '+esc(user.email)+'.</b><br>'+(u.role==='disabled'?'This account has been switched off.':'Your account is waiting for Wian to give it access. This screen updates by itself once he has.')+'<br><br><a href="#" id="gOut" style="color:#fff">Sign out</a>');
+      bindOut(); showGate(); return;
+    }
+    if (was===ME.role+'|'+ME.team) return;        // name change only
+    hideGate();
+    Store.start(ME.role==='scanner'?'scanner':ME.role);
+    whenReady(function(){
+      if (!S() && ME.role!=='scanner') Store.setSettings(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), ME.name, 'Created default settings');
+      if (!S()) { gateMsg('The farm settings are not set up yet. Ask Wian to sign in on a computer first.<br><br><a href="#" id="gOut" style="color:#fff">Sign out</a>'); bindOut(); showGate(); return; }
+      if (ME.role==='scanner') Scanner.open(); else { $('userBtn').textContent=ME.name+' ▾'; route(); }
+    });
+  }, function(e){ gateMsg('Could not read your account ('+esc(e.code||e)+'). Check signal and try again.<br><br><a href="#" id="gOut" style="color:#fff">Sign out</a>'); bindOut(); showGate(); });
 }
-function signOut(){ ME=null; try{ sessionStorage.removeItem('ht-user'); }catch(e){} Scanner.close(); $('gate').style.display='flex'; }
-$('who').innerHTML = USERS.map(function(u,i){ return '<button data-i="'+i+'">'+esc(u.name)+'<span>'+esc(u.desc)+'</span></button>'; }).join('');
-$('who').onclick=function(e){ var b=e.target.closest('button'); if (b) signIn(USERS[+b.getAttribute('data-i')]); };
+function whenReady(fn){ var n=0; (function wait(){ if (Store.isReady() || n++>(navigator.onLine?80:20)) return fn(); setTimeout(wait,100); })(); }
+function bindOut(){ var a=$('gOut'); if (a) a.onclick=function(e){ e.preventDefault(); signOut(); }; }
+function signOut(){ fbSignOut(AUTH); }
+$('login').onsubmit=function(e){ e.preventDefault(); $('lgMsg').textContent='Signing in…'; $('lgGo').disabled=true;
+  signInWithEmailAndPassword(AUTH, $('lgEmail').value.trim(), $('lgPw').value).then(function(){ $('lgMsg').textContent=''; $('lgPw').value=''; })
+  .catch(function(err){ $('lgMsg').textContent = /invalid|wrong|not-found|credential/.test(err.code||'') ? 'Email or password is wrong.' : err.code==='auth/network-request-failed' ? 'No signal. The first sign-in on a device needs signal.' : 'Could not sign in ('+err.code+').'; })
+  .then(function(){ $('lgGo').disabled=false; }); };
+$('lgForgot').onclick=function(e){ e.preventDefault(); var em=$('lgEmail').value.trim(); if (!em) return $('lgMsg').textContent='Type your email first, then tap Forgot password.';
+  sendPasswordResetEmail(AUTH, em).then(function(){ $('lgMsg').textContent='If that email has an account, a reset link is on its way.'; }).catch(function(){ $('lgMsg').textContent='If that email has an account, a reset link is on its way.'; }); };
 $('userBtn').onclick=function(){
-  modal('<h2>'+esc(ME.name)+'</h2><p class="mute">Prototype, version '+APP_VERSION+'. Data is demo data stored on this device only ('+Store.sizeKb()+' KB).</p>'+
+  modal('<h2>'+esc(ME.name)+'</h2><p class="mute">'+esc(ME.email)+' · '+roleLabel(ME.role)+' · version '+APP_VERSION+'</p>'+
     '<div class="acts"><button class="btn" data-a="scanner">Scanner screen, Team 1</button><button class="btn" data-a="scanner2">Scanner screen, Team 2</button><button class="btn" data-a="out">Sign out</button><button class="btn p" data-a="close">Close</button></div>',
     { scanner:function(){ closeModal(); VIEW.scanTeam='T1'; Scanner.open(); }, scanner2:function(){ closeModal(); VIEW.scanTeam='T2'; Scanner.open(); }, out:function(){ closeModal(); signOut(); } });
 };
+function syncPill(){
+  var st=Store.sync(), on=navigator.onLine, el=$('syncPill'), sc=$('scSync');
+  var txt, cls;
+  if (!on){ txt=st.pending? 'No signal · saved on this device' : 'No signal · working offline'; cls='off'; }
+  else if (st.pending){ txt='Sending…'; cls='wait'; }
+  else { txt='All sent'; cls='ok'; }
+  if (el){ el.textContent=txt; el.className='pill '+cls; }
+  if (sc){ sc.textContent = !on ? (st.pending? 'Saved on phone · no signal':'No signal') : st.pending ? 'Sending…' : 'All sent'; sc.className='chip '+(on&&!st.pending?'good':''); sc.style.color = on&&!st.pending ? '' : '#fbbf24'; }
+}
+window.addEventListener('online', syncPill); window.addEventListener('offline', syncPill);
 
 /* ---------------- modal ---------------- */
 var modalActs={};
@@ -509,16 +542,27 @@ var TABS=[['today','Today'],['pickers','Pickers'],['bins','Bins'],['pay','Pay'],
 var VIEW={};    // per-view state
 function go(t){ location.hash='#'+t; }
 function route(){
-  if (!ME || ME.role!=='office') return;
+  if (!ME || (ME.role!=='office' && ME.role!=='admin') || $('scan').classList.contains('on')) return;
   var t=(location.hash||'#today').slice(1).split('/')[0]; if (!VIEWS[t]) t='today';
   $('tabs').innerHTML=TABS.map(function(x){ return '<button class="tab'+(x[0]===t?' on':'')+'" data-t="'+x[0]+'">'+x[1]+'</button>'; }).join('');
-  $('clockPill').textContent = CLOCK.pinned!=null ? 'Demo clock '+minToHm(CLOCK.pinned) : 'Live clock';
+  syncPill();
   VIEWS[t]($('view'));
   VIEW.current=t;
 }
 $('tabs').onclick=function(e){ var b=e.target.closest('[data-t]'); if (b) go(b.getAttribute('data-t')); };
 window.addEventListener('hashchange', route);
-function rerender(){ if (ME && ME.role==='office' && !$('mb').classList.contains('on')) route(); }
+// redraw after data changes, but never while someone is typing in a box or a dialog is open
+var rrT=null;
+function rerender(){
+  clearTimeout(rrT);
+  rrT=setTimeout(function(){
+    if (!ME || ME.role==='scanner' || $('scan').classList.contains('on')) return;
+    if ($('mb').classList.contains('on')) return;
+    var a=document.activeElement;
+    if (a && a.closest && a.closest('#view') && /^(INPUT|SELECT|TEXTAREA)$/.test(a.tagName)) { a.addEventListener('blur', rerender, {once:true}); return; }
+    var y=window.scrollY; route(); window.scrollTo(0,y);
+  },250);
+}
 
 /* ---------------- chart helpers ---------------- */
 function lineChart(series, opts){
@@ -600,7 +644,7 @@ VIEWS.today=function(el){
   h+='</div>';
 
   // per hour
-  var hours={}; Store.where('scans',function(s){return s.date===date && s.status==='OK';}).forEach(function(s){ var hh=new Date(s.t).getHours(); hours[hh]=(hours[hh]||0)+1; });
+  var hours={}; Store.where('pickerDays',function(p){return p.date===date && p.h;}).forEach(function(p){ for (var hh in p.h) hours[hh]=(hours[hh]||0)+p.h[hh]; });
   var hasScans=Object.keys(hours).length;
   // rankings
   var pds=Store.where('pickerDays',function(p){return p.date===date && bagsOf(p)>0;}).sort(function(a,b){return bagsOf(b)-bagsOf(a);});
@@ -618,8 +662,9 @@ VIEWS.today=function(el){
   }
   // needs attention
   var attn=[];
+  if (!Store.all('workers').length) attn.push('No workers yet. Add them in <a href="#settings">Settings</a>.');
   pds.forEach(function(p){ if (p.manual>=3) attn.push('<b>'+esc(wName(worker(p.workerId)))+'</b> #'+worker(p.workerId).no+': '+p.manual+' bags typed by hand. Band may be faulty.'); });
-  var unk=Store.where('scans',function(s){return s.date===date && s.status==='UNKNOWN';}).length;
+  var unk=(Store.get('dayFlags',date)||{}).unknown||0;
   if (unk) attn.push(unk+' taps from bands that are not linked to anyone.');
   if (attn.length) h+='<div class="card"><h3>Needs attention</h3>'+attn.map(function(a){return '<div class="list-row">'+a+'</div>';}).join('')+'</div>';
   el.innerHTML=h;
@@ -676,10 +721,12 @@ function pickerModal(wid){
     if (!d||!n) return toast('Enter a day and a number of bags');
     if (!why) return toast('Give a reason');
     var td=Store.get('teamDays',d+'|'+w.team);
-    var pd=pdFor(d,wid)||{id:d+'|'+wid,date:d,workerId:wid,team:w.team,block:td?td.block:'',bags:0,manual:0,adj:0,first:null,last:null};
+    var pd=pdFor(d,wid);
     if (bagsOf(pd)+n<0) return toast('That would make the day negative');
-    pd.adj=(pd.adj||0)+n; pd.adjWhy=((pd.adjWhy?pd.adjWhy+'; ':'')+why);
-    Store.put('pickerDays',pd); Store.log(ME.name,'Corrected '+wName(w)+' #'+w.no+' on '+d+' by '+(n>0?'+':'')+n+' bags: '+why);
+    var ws=weekStart(d); if (Store.get('paidWeeks',ws)) return toast('That week is marked as paid. Unlock it on the Pay screen first.');
+    var sets={adjWhy:((pd&&pd.adjWhy?pd.adjWhy+'; ':'')+why)};
+    if (!pd){ sets.date=d; sets.workerId=wid; sets.team=w.team; sets.block=td?td.block:''; }
+    Store.bump('pickerDays', d+'|'+wid, {adj:n}, sets); Store.log(ME.name,'Corrected '+wName(w)+' #'+w.no+' on '+d+' by '+(n>0?'+':'')+n+' bags: '+why);
     toast('Saved'); pickerModal(wid);
   }});
 }
@@ -827,6 +874,7 @@ VIEWS.orchards=function(el){
   var blocks=Store.all('blocks').sort(function(a,b){return +a.id-+b.id;});
   var years=[]; Store.all('bloom').forEach(function(b){ if (years.indexOf(b.year)<0) years.push(b.year); }); years.sort().reverse();
   var h='<div class="bar"><h2>Orchards</h2></div>';
+  if (!blocks.length) h+='<div class="note b">No blocks yet. <button class="btn sm p" id="loadRef">Load the Sandrivier blocks and bloom dates</button> (Block Master and Fanus\'s bloom sheets 2020 to 2026)</div>';
   h+='<div class="card"><h3>Blocks</h3><div class="small mute" style="margin-bottom:6px">From the block master. Tap a block to edit. Rows per block still to fill in.</div><div class="tw"><table><thead><tr><th>Block</th><th>Variety</th><th class="r">Trees</th><th class="r">Ha</th><th class="r">Rows</th><th class="hide-m">Planted</th><th class="hide-m">Spacing</th><th>Soil</th><th class="hide-m">Ridged</th></tr></thead><tbody>'+
     blocks.map(function(b){ return '<tr class="click" data-b="'+b.id+'"><td><b>'+esc(b.name)+'</b></td><td>'+esc(vShort(b.variety))+'</td><td class="r num">'+fmt(b.trees)+'</td><td class="r num">'+b.ha+'</td><td class="r num">'+(b.rows||'<span class="mute">–</span>')+'</td><td class="hide-m">'+esc(b.planted)+'</td><td class="hide-m">'+esc(b.spacing)+'</td><td>'+esc(b.soil)+'</td><td class="hide-m">'+esc(b.ridged)+'</td></tr>'; }).join('')+
     '<tr class="tot"><td>Farm</td><td></td><td class="r num">'+fmt(blocks.reduce(function(a,b){return a+(+b.trees||0);},0))+'</td><td class="r num">'+blocks.reduce(function(a,b){return a+(+b.ha||0);},0)+'</td><td></td><td class="hide-m"></td><td class="hide-m"></td><td></td><td class="hide-m"></td></tr></tbody></table></div>'+
@@ -837,6 +885,7 @@ VIEWS.orchards=function(el){
     '</tbody></table></div></div>';
   h+='<div class="card" style="opacity:.75"><h3>Weather and soil data</h3><div class="mute">Coming later: import iLeaf weather and soil probe readings here.</div></div>';
   el.innerHTML=h;
+  if ($('loadRef')) $('loadRef').onclick=function(){ loadReference(); toast('Loaded'); };
   el.querySelectorAll('tr[data-b]').forEach(function(r){ r.onclick=function(){ blockModal(r.getAttribute('data-b')); }; });
   $('addBlock').onclick=function(){ blockModal(null); };
   el.querySelectorAll('[data-bl]').forEach(function(c){ c.onclick=function(){
@@ -865,7 +914,7 @@ VIEWS.settings=function(el){
   var ws=Store.where('workers',function(w){ return (showAll||w.active) && (!q || (wName(w)+' '+w.no+' '+w.uid).toLowerCase().indexOf(q)>=0); }).sort(function(a,b){return a.no-b.no;});
   var unlinked=Store.where('workers',function(w){return w.active && w.role==='picker' && !w.uid;}).length;
   var h='<div class="bar"><h2>Settings</h2></div>';
-  h+='<div class="card"><div class="bar" style="margin-bottom:8px"><h3 style="margin:0;margin-right:auto">Workers</h3><input type="search" id="wQ" placeholder="Search" value="'+esc(VIEW.wQ||'')+'" style="max-width:200px"><button class="btn p" id="addW">+ Add worker</button></div>'+
+  h+='<div class="card"><div class="bar" style="margin-bottom:8px"><h3 style="margin:0;margin-right:auto">Workers</h3><input type="search" id="wQ" placeholder="Search" value="'+esc(VIEW.wQ||'')+'" style="max-width:200px"><button class="btn" id="bulkW">Paste a list</button><button class="btn p" id="addW">+ Add worker</button></div>'+
     (unlinked?'<div class="note">'+unlinked+' active picker'+(unlinked>1?'s have':' has')+' no band linked yet.</div>':'')+
     '<div class="tw"><table><thead><tr><th>#</th><th>Name</th><th>Work</th><th class="hide-m">Paid</th><th class="hide-m">Team</th><th>Band</th><th class="hide-m">Status</th></tr></thead><tbody>'+
     ws.map(function(w){ return '<tr class="click" data-w="'+w.id+'"'+(w.active?'':' style="opacity:.5"')+'><td class="num">'+w.no+'</td><td><b>'+esc(wName(w))+'</b></td><td>'+(w.role==='picker'?'Picker':'Sorter')+'</td><td class="hide-m">'+(w.pay==='day'?'Day':'Contract')+'</td><td class="hide-m">'+esc(teamName(w.team))+'</td><td>'+(w.uid?'<span class="tag g">Linked</span>':(w.role==='picker'?'<span class="tag a">No band</span>':'<span class="mute small">n/a</span>'))+'</td><td class="hide-m">'+(w.active?'Active':'Left')+'</td></tr>'; }).join('')+
@@ -882,7 +931,15 @@ VIEWS.settings=function(el){
   var audit=Store.all('audit').sort(function(a,b){return b.t-a.t;}).slice(0,40);
   h+='<div class="card"><h3>Change log</h3><div class="small mute" style="margin-bottom:6px">Every correction, loan, bin entry and setting change, with who and when.</div>'+
     audit.map(function(a){ var d=new Date(a.t); return '<div class="list-row small"><span class="mute num" style="width:96px;flex:none">'+d.getDate()+' '+MON[d.getMonth()]+' '+hm(a.t)+'</span><b style="width:70px;flex:none">'+esc(a.who)+'</b><span>'+esc(a.what)+'</span></div>'; }).join('')+'</div>';
-  h+='<div class="card" style="border-style:dashed"><h3>Prototype</h3><div class="mute small">Version '+APP_VERSION+'. Demo data only, kept in this browser ('+Store.sizeKb()+' KB). The demo data starts fresh each day. '+(CLOCK.pinned!=null?'The demo clock is pinned at '+minToHm(CLOCK.pinned)+' because it is outside picking hours.':'')+'</div><div class="acts" style="justify-content:flex-start"><button class="btn w" id="reseed">Reset demo data</button></div></div>';
+  if (ME.role==='admin'){
+    var us=Store.all('users').sort(function(a,b){ return (a.role==='pending'?0:1)-(b.role==='pending'?0:1) || String(a.email).localeCompare(b.email); });
+    h+='<div class="card"><h3>People who can sign in</h3><div class="small mute" style="margin-bottom:6px">Create the login in the Firebase console (Authentication, Users). The person signs in once, then appears here as waiting. Give them access below.</div><div class="tw"><table><thead><tr><th>Email</th><th>Name</th><th>Access</th></tr></thead><tbody>'+
+      us.map(function(u){ var v=u.role==='scanner'?'scanner|'+(u.team||'T1'):u.role;
+        return '<tr><td>'+esc(u.email)+'</td><td><input type="text" data-un="'+u.id+'" value="'+esc(u.name||'')+'" style="max-width:160px"></td><td><select data-ur="'+u.id+'"'+(u.id===ME.uid?' disabled':'')+' style="max-width:230px">'+
+          [['pending','Waiting'],['office','Office: everything'],['admin','Admin: everything + access'],['scanner|T1','FORT 1, '+teamName('T1')],['scanner|T2','FORT 1, '+teamName('T2')],['disabled','Switched off']].map(function(o){ return '<option value="'+o[0]+'"'+(o[0]===v?' selected':'')+'>'+o[1]+'</option>'; }).join('')+'</select></td></tr>'; }).join('')+
+      '</tbody></table></div></div>';
+  }
+  h+='<div class="card" style="border-style:dashed"><h3>About</h3><div class="mute small">Harvest Tracker version '+APP_VERSION+'. Data is stored in Firebase (Kettel) with a copy on each device, so screens keep working without signal and catch up when it returns.</div></div>';
   el.innerHTML=h;
   $('wQ').oninput=function(){ VIEW.wQ=this.value; var p=this.selectionStart; route(); var n=$('wQ'); n.focus(); n.setSelectionRange(p,p); };
   $('wAll').onchange=function(){ VIEW.wAll=this.checked; route(); };
@@ -895,10 +952,30 @@ VIEWS.settings=function(el){
     el.querySelectorAll('[data-ss]').forEach(function(i){ var p=i.getAttribute('data-ss').split('|'); if (i.value) s.sessions[+p[0]][+p[1]]=i.value; });
     el.querySelectorAll('[data-tn]').forEach(function(i){ s.teams[+i.getAttribute('data-tn')].name=i.value.trim()||s.teams[+i.getAttribute('data-tn')].name; });
     Store.setSettings(s,ME.name,'Picking sessions and team names updated'); toast('Saved'); };
-  $('reseed').onclick=function(){ modal('<h2>Reset demo data?</h2><p>Starts the prototype again with fresh demo pickers and scans. Anything you typed in will be gone.</p><div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn w" data-a="ok">Reset</button></div>',
-    { ok:function(){ closeModal(); seed(); route(); toast('Demo data reset'); } }); };
+  el.querySelectorAll('[data-ur]').forEach(function(sel){ sel.onchange=function(){ var id=sel.getAttribute('data-ur'), p=sel.value.split('|'), u=Store.get('users',id);
+    Store.update('users',id,{role:p[0], team:p[1]||null}); Store.log(ME.name,'Access for '+u.email+': '+sel.options[sel.selectedIndex].text); toast('Saved'); }; });
+  el.querySelectorAll('[data-un]').forEach(function(inp){ inp.onchange=function(){ Store.update('users',inp.getAttribute('data-un'),{name:inp.value.trim()}); toast('Saved'); }; });
+  $('bulkW').onclick=bulkWorkers;
 };
 
+function bulkWorkers(){
+  modal('<h2>Add workers from a list</h2><p class="small mute">One worker per line: number, name, surname. For example <b>12 Sipho Adams</b>. Copy it from Fanus\'s list or a spreadsheet. Everyone on the list gets the settings below; change individuals afterwards.</p>'+
+    '<textarea id="bwT" rows="10" placeholder="1 Sipho Adams&#10;2 Thandiwe Booysen"></textarea><div class="fr">'+
+    '<div><label class="f">Work</label><select id="bwR"><option value="picker">Picker</option><option value="sorter">Sorter</option></select></div>'+
+    '<div><label class="f">Paid</label><select id="bwP"><option value="day">Day worker</option><option value="contract">Contract</option></select></div>'+
+    '<div><label class="f">Team</label><select id="bwTm">'+S().teams.map(function(t){return '<option value="'+t.id+'">'+esc(t.name)+'</option>';}).join('')+'</select></div></div>'+
+    '<div id="bwMsg" class="small" style="margin-top:10px;color:var(--red)"></div><div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Add</button></div>',
+  { ok:function(){
+      var lines=$('bwT').value.split(/\n/).map(function(l){return l.trim();}).filter(Boolean), add=[], bad=[], seen={};
+      var taken={}; Store.where('workers',function(w){return w.active;}).forEach(function(w){ taken[w.no]=wName(w); });
+      lines.forEach(function(l){ var m=l.match(/^#?(\d+)[\s,;.:\t-]+(.+)$/); if (!m){ bad.push(l+' (no number)'); return; }
+        var no=+m[1], parts=m[2].replace(/[,;\t]+/g,' ').trim().split(/\s+/), first=parts.shift(), last=parts.join(' ');
+        if (taken[no]) bad.push(no+' is already '+taken[no]); else if (seen[no]) bad.push(no+' appears twice'); else { seen[no]=1; add.push({no:no,first:first,last:last}); } });
+      if (bad.length){ $('bwMsg').innerHTML='Fix these first:<br>'+bad.map(esc).join('<br>'); return; }
+      if (!add.length) return toast('Nothing to add');
+      add.forEach(function(a){ Store.put('workers',{id:'w'+uid(),no:a.no,first:a.first,last:a.last,role:$('bwR').value,pay:$('bwP').value,team:$('bwTm').value,uid:'',oldUids:[],active:true}); });
+      Store.log(ME.name,'Added '+add.length+' workers from a list'); closeModal(); toast(add.length+' workers added'); route(); } });
+}
 function workerModal(id){
   var w=id?JSON.parse(JSON.stringify(worker(id))):{id:'w'+uid(),no:'',first:'',last:'',role:'picker',pay:'day',team:'T1',uid:'',oldUids:[],active:true};
   var nfc='NDEFReader' in window;
@@ -943,18 +1020,23 @@ var Scanner=(function(){
   function idle(){ if (!scanning) return show('', 'SANDRIVIER', 'Press START', '', 'The screen stays on while scanning.'); show('', 'READY', 'Tap a band', '', myCount()+' bags for '+teamName(team)+' today'); }
   function tone(f,ms,w){ if (!audio) return; var o=audio.createOscillator(), g=audio.createGain(); o.frequency.value=f; o.type='square'; g.gain.value=.25; o.connect(g); g.connect(audio.destination); var t=audio.currentTime+(w||0); o.start(t); o.stop(t+ms/1000); }
   function fb(k){ if (k==='ok'){ tone(1500,120); navigator.vibrate&&navigator.vibrate(120); } else if (k==='dup'){ tone(500,150); tone(500,150,.25); navigator.vibrate&&navigator.vibrate([150,100,150]); } else { tone(250,600); navigator.vibrate&&navigator.vibrate(600); } }
-  function head(){ $('scTeam').textContent=teamName(team); var b=blockById(block); $('scBlock').textContent=b?b.name+' · '+vShort(b.variety):'No block'; }
+  function head(){ $('scTeam').textContent=teamName(team)+(ME.role==='scanner'?'':' (test)'); var b=blockById(block); $('scBlock').textContent=b?b.name+' · '+vShort(b.variety):'No block'; }
 
   function count(w,method){
     var now=NOW().getTime(), today=TODAY(), pd=pdFor(today,w.id), win=S().repeatMin*60000;
     var status = pd && pd.last && now-pd.last<win ? 'DUP' : 'OK';
-    Store.put('scans',{id:uid(),t:now,date:today,team:team,workerId:w.id,method:method,status:status,device:ME.name},true);
+    Store.add('scans',{t:now,date:today,team:team,block:block,workerId:w.id,no:w.no,uid:w.uid||'',method:method,status:status,device:ME.email});
     if (status==='OK'){
-      pd=pd||{id:today+'|'+w.id,date:today,workerId:w.id,team:w.team,block:block,bags:0,manual:0,adj:0,first:null,last:null};
-      pd.bags++; if (method==='MANUAL') pd.manual++; if (!pd.first) pd.first=now; pd.last=now; Store.put('pickerDays',pd);
-      fb('ok'); show('#15803d','BAG COUNTED'+(method==='MANUAL'?' (typed)':''), wName(w)+'  #'+w.no, bagsOf(pd), 'bags today', 2500);
+      var shown=bagsOf(pd)+1, hh=new Date(now).getHours(), incs={bags:1}, sets={last:now};
+      incs['h.'+hh]=1; if (method==='MANUAL') incs.manual=1;
+      if (!pd){ sets.first=now; sets.date=today; sets.workerId=w.id; sets.team=w.team; sets.block=block||''; }
+      var mpd = pd || {id:today+'|'+w.id,date:today,workerId:w.id,team:w.team,block:block||'',bags:0,manual:0,first:now,h:{}};
+      mpd.bags=(mpd.bags||0)+1; mpd.last=now; if (method==='MANUAL') mpd.manual=(mpd.manual||0)+1; mpd.h=mpd.h||{}; mpd.h[hh]=(mpd.h[hh]||0)+1;
+      Store.local('pickerDays', mpd);
+      Store.bump('pickerDays', today+'|'+w.id, incs, sets);
+      fb('ok'); show('#15803d','BAG COUNTED'+(method==='MANUAL'?' (typed)':''), wName(w)+'  #'+w.no, shown, 'bags today', 2500);
     } else {
-      Store.flush(); fb('dup'); var ago=Math.round((now-pd.last)/1000);
+      fb('dup'); var ago=Math.round((now-pd.last)/1000);
       show('#b45309','NOT COUNTED', wName(w)+'  #'+w.no, '', 'Counted '+ago+' s ago. Wait '+Math.ceil((win-(now-pd.last))/1000)+' s.', 3500);
     }
     return status;
@@ -965,7 +1047,8 @@ var Scanner=(function(){
     if ($('ovLink').classList.contains('on')) return;
     var w=Store.where('workers',function(x){ return x.active && x.uid===u; })[0];
     if (w) return count(w,'NFC');
-    Store.put('scans',{id:uid(),t:NOW().getTime(),date:TODAY(),team:team,uid:u,method:'NFC',status:'UNKNOWN',device:ME.name});
+    Store.add('scans',{t:NOW().getTime(),date:TODAY(),team:team,block:block||'',uid:u,method:'NFC',status:'UNKNOWN',device:ME.email});
+    Store.bump('dayFlags',TODAY(),{unknown:1},{date:TODAY()});
     fb('bad'); show('#1d4ed8','UNKNOWN BAND','Not linked','', 'Band '+u, 0); linkUid=u;
     $('lUid').textContent='Band '+u; $('lNo').value=''; $('lMsg').textContent=''; $('lReplace').classList.add('hide'); open('ovLink');
   }
@@ -986,7 +1069,7 @@ var Scanner=(function(){
     open('ovDay');
   }
   $('dayOk').onclick=function(){ block=$('dayBlock').value; var id=TODAY()+'|'+team, td=Store.get('teamDays',id);
-    if (!td || td.block!==block){ Store.put('teamDays',{id:id,date:TODAY(),team:team,block:block}); Store.log(ME.name, teamName(team)+' picking '+blockById(block).name+' on '+TODAY()); }
+    if (!td || td.block!==block){ Store.put('teamDays',{id:id,date:TODAY(),team:team,block:block}); Store.log(ME.email, teamName(team)+' picking '+blockById(block).name+' on '+TODAY()); }
     close('ovDay'); head(); idle(); };
   // keypad
   $('keys').innerHTML=['1','2','3','4','5','6','7','8','9','⌫','0','C'].map(function(x){return '<button data-k="'+x+'">'+x+'</button>';}).join('');
@@ -1002,7 +1085,9 @@ var Scanner=(function(){
   function link(replace){ var no=$('lNo').value.trim(), w=Store.where('workers',function(x){return x.active && String(x.no)===no;})[0];
     if (!w){ $('lMsg').textContent='Number '+(no||'?')+' is not on the list. Fanus adds new workers in Settings.'; return; }
     if (w.uid && !replace){ $('lMsg').textContent=wName(w)+' #'+no+' already has a band. Is this a replacement for a lost or broken band?'; $('lReplace').classList.remove('hide'); return; }
-    if (w.uid) w.oldUids=(w.oldUids||[]).concat([w.uid]); w.uid=linkUid; Store.put('workers',w); Store.log(ME.name,(replace?'Replaced band for ':'Linked band to ')+wName(w)+' #'+no+': '+linkUid);
+    var taken=Store.where('workers',function(x){ return x.uid===linkUid && x.id!==w.id; })[0];
+    if (taken){ $('lMsg').textContent='This band is already linked to '+wName(taken)+' #'+taken.no+'.'; return; }
+    var olds=(w.oldUids||[]).concat(w.uid?[w.uid]:[]); Store.update('workers',w.id,{uid:linkUid, oldUids:olds}); Store.log(ME.email,(replace?'Replaced band for ':'Linked band to ')+wName(w)+' #'+no+': '+linkUid);
     close('ovLink'); fb('ok'); show('#15803d', replace?'BAND REPLACED':'BAND LINKED', wName(w)+'  #'+no, '', 'Tap again to count a bag.', 3000); }
   $('lOk').onclick=function(){ link(false); }; $('lReplace').onclick=function(){ link(true); };
   // today
@@ -1012,19 +1097,29 @@ var Scanner=(function(){
       pds.map(function(p){ var w=worker(p.workerId); return '<tr><td>'+esc(wName(w))+' <span style="color:#94a3b8">#'+w.no+'</span></td><td style="text-align:right">'+bagsOf(p)+'</td><td style="text-align:right">'+(p.last?hm(p.last):'')+'</td></tr>'; }).join('')+'</table>';
     open('ovSToday'); };
   $('stClose').onclick=function(){ close('ovSToday'); };
-  $('scMenu').onclick=function(){ $('smInfo').innerHTML=esc(ME.name)+' · '+esc(teamName(team))+'<br>Version '+APP_VERSION+'<br>Prototype: scans are saved on this device only.'; open('ovSMenu'); };
+  $('scMenu').onclick=function(){ var st=Store.sync(); $('smInfo').innerHTML=esc(ME.email)+' · '+esc(teamName(team))+'<br>Version '+APP_VERSION+'<br>'+(st.pending? 'Some bags are saved on this phone and still waiting to send':'Everything is sent')+(navigator.onLine?'':' · no signal')+'<br>'+battInfo(); open('ovSMenu'); };
   $('smClose').onclick=function(){ close('ovSMenu'); };
   $('smBlock').onclick=function(){ close('ovSMenu'); askBlock(); };
   $('smOut').onclick=function(){ close('ovSMenu'); if (ME.role==='scanner') signOut(); else { Scanner.close(); route(); } };
   $('scStart').onclick=start;
+  if (TEST) $('scDemo').classList.remove('hide');
   $('scDemo').onclick=function(){ if (!scanning){ scanning=true; $('scStart').style.display='none'; }
     var ws=Store.where('workers',function(x){return x.active && x.role==='picker' && x.team===team && x.uid;});
     if (Math.random()<0.03) return onBand('04:00:DE:AD:'+pad(Math.floor(Math.random()*90))+':00:01');
     var w=ws[Math.floor(Math.random()*ws.length)]; if (w) onBand(w.uid); };
+  // keep the day right if the phone stays on overnight
+  setInterval(function(){ if (!$('scan').classList.contains('on')) return; if (dayOpen && dayOpen!==TODAY()){ dayOpen=TODAY(); Store.start(ME.role==='scanner'?'scanner':ME.role); block=null; whenReady(function(){ head(); askBlock(); }); } battery(); }, 60000);
+  var dayOpen=null;
+  function battery(){ if (!navigator.getBattery) return; navigator.getBattery().then(function(b){ var l=Math.round(b.level*100), bl=[]; try{ bl=JSON.parse(localStorage.getItem('ht-batlog')||'[]'); }catch(e){}
+    var now=Date.now(); if (b.charging) bl=[]; else if (!bl.length || now-bl[bl.length-1].t>=15*60000) bl.push({t:now,l:l}); try{ localStorage.setItem('ht-batlog',JSON.stringify(bl.slice(-80))); }catch(e){}
+    $('scBatt').textContent=l+'%'+(b.charging?' charging':''); $('scBatt').style.color = l<20&&!b.charging ? '#f87171' : ''; }); }
+  window.battInfo=function(){ var bl=[]; try{ bl=JSON.parse(localStorage.getItem('ht-batlog')||'[]'); }catch(e){} if (bl.length<3) return 'Battery: needs 30 minutes off the charger to estimate.';
+    var hrs=(bl[bl.length-1].t-bl[0].t)/3600000, used=bl[0].l-bl[bl.length-1].l; if (hrs<0.5||used<=0) return 'Battery: needs 30 minutes off the charger to estimate.';
+    return 'Battery: '+bl[0].l+'% at '+hm(bl[0].t)+', now '+bl[bl.length-1].l+'%. About '+(used/hrs).toFixed(1)+'% an hour, so a charge lasts about '+Math.round(100/(used/hrs))+' hours.'; };
   return {
-    open:function(){ team = ME.team || VIEW.scanTeam || 'T1';
-      if (ME.role==='office'){ team = VIEW.scanTeam || 'T1'; }
-      $('smOut').textContent = ME.role==='office' ? 'Back to the office screens' : 'Sign out';
+    open:function(){ dayOpen=TODAY(); battery(); team = ME.team || VIEW.scanTeam || 'T1';
+      if (ME.role!=='scanner'){ team = VIEW.scanTeam || 'T1'; }
+      $('smOut').textContent = ME.role!=='scanner' ? 'Back to the office screens' : 'Sign out';
       $('scan').classList.add('on'); scanning=false; $('scStart').style.display=''; head();
       var td=Store.get('teamDays',TODAY()+'|'+team); if (td){ block=td.block; head(); idle(); } else { idle(); askBlock(); } },
     close:function(){ ['scan','ovDay','ovKey','ovLink','ovSToday','ovSMenu'].forEach(close); scanning=false; }
@@ -1034,11 +1129,19 @@ var Scanner=(function(){
 /* =====================================================================
    start
    ===================================================================== */
-setClock();
-if (!Store.init() || !Store.get('meta','seed') || Store.get('meta','seed').date!==TODAY()) seed();
-Store.onChange(function(){ rerender(); });
-setInterval(function(){ setClock(); if (VIEW.current==='today') rerender(); }, 60000);
-try { var su=sessionStorage.getItem('ht-user'); if (su){ var u=USERS.filter(function(x){return x.id===su;})[0]; if (u) signIn(u); } } catch(e){}
+if (!FIREBASE_CONFIG && !EMU){
+  $('login').classList.add('hide'); $('gateMsg').classList.remove('hide');
+  $('gateMsg').innerHTML='This app is not connected to its database yet (missing Firebase settings).';
+  return;
+}
+var app = initializeApp(EMU ? {apiKey:'demo-key', projectId:'demo-harvest', authDomain:'demo-harvest.firebaseapp.com', appId:'demo'} : FIREBASE_CONFIG);
+AUTH = getAuth(app);
+if (EMU) connectAuthEmulator(AUTH, 'http://'+location.hostname+':9099', {disableWarnings:true});
+Store.init(app);
+Store.onChange(function(col){ if (col==='_sync') return syncPill(); rerender(); });
+onAuthStateChanged(AUTH, onUser);
+setInterval(function(){ if (VIEW.current==='today') rerender(); }, 60000);
+if ('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(function(){});
 })();
 </script>
 </body>
