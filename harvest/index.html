@@ -223,7 +223,9 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
   <div id="dayInfo" style="color:#94a3b8"></div>
   <label>Which block is your team picking today?</label>
   <select id="dayBlock"></select>
+  <div class="smsg" id="dayMsg" style="color:#fbbf24"></div>
   <div class="row"><button class="p" id="dayOk">Start picking</button></div>
+  <div class="row"><button id="dayOut">Sign out</button></div>
 </div>
 <div class="sov" id="ovKey">
   <h2>Type the picker number</h2>
@@ -272,7 +274,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.0';
+var APP_VERSION = '1.0.1';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -327,9 +329,10 @@ var Store = (function(){
   function fromDb(col,d){ if (col==='settings' && d.sessions) d.sessions=d.sessions.map(function(v){ return Array.isArray(v)?v:[v.from,v.to]; }); return d; }
   function subscribe(col, q, tries){
     ready[col]=false; mem[col]={}; tries=tries||0;
-    var u=onSnapshot(q, function(snap){
+    var u=onSnapshot(q, {includeMetadataChanges:true}, function(snap){
       snap.docChanges().forEach(function(c){ if (c.type==='removed') delete mem[col][c.doc.id]; else { var d=fromDb(col,c.doc.data()); d.id=c.doc.id; mem[col][c.doc.id]=d; } });
-      ready[col]=true; notify(col);
+      if (!snap.metadata.fromCache || !navigator.onLine) ready[col]=true;
+      notify(col);
     }, function(e){ console.warn('listen '+col, e.code); lastErr=e.code||'';
       // access can arrive a moment after sign-in: try again a few times
       if (tries<5) setTimeout(function(){ if (subs.indexOf(u)>=0){ subs.splice(subs.indexOf(u),1); subscribe(col,q,tries+1); } }, 1500*(tries+1));
@@ -1052,25 +1055,31 @@ var Scanner=(function(){
     fb('bad'); show('#1d4ed8','UNKNOWN BAND','Not linked','', 'Band '+u, 0); linkUid=u;
     $('lUid').textContent='Band '+u; $('lNo').value=''; $('lMsg').textContent=''; $('lReplace').classList.add('hide'); open('ovLink');
   }
+  var reader=null;
   function start(){
+    if (scanning && reader) { idle(); return; }
     if (audio===null){ try{ audio=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audio=false; } } if (audio&&audio.resume) audio.resume();
     if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(function(l){wake=l;}).catch(function(){});
     if (!('NDEFReader' in window)){ scanning=true; $('scStart').style.display='none'; return show('', 'NO NFC ON THIS DEVICE', 'Use the demo button', '', 'On the FORT 1 a band tap counts a bag.', 0); }
-    try { var r=new NDEFReader(); r.scan().then(function(){ scanning=true; $('scStart').style.display='none'; idle(); })
-      .catch(function(e){ show('#b91c1c','NFC NOT STARTED',e.name||'Error','',(e.message||'')+' Turn on NFC and press START.',0); });
+    try { var r=reader=new NDEFReader(); r.scan().then(function(){ scanning=true; $('scStart').style.display='none'; idle(); })
+      .catch(function(e){ reader=null; $('scStart').style.display=''; show('#b91c1c','NFC NOT STARTED',e.name||'Error','',(e.message||'')+' Turn on NFC and press START.',0); });
       r.onreading=function(ev){ onBand(ev.serialNumber); }; r.onreadingerror=function(){ fb('bad'); show('#b91c1c','COULD NOT READ BAND','Hold it still and try again','','',2500); };
     } catch(e){ show('#b91c1c','NFC ERROR',e.name||'','',e.message||'',0); }
   }
   function open(id){ $(id).classList.add('on'); } function close(id){ $(id).classList.remove('on'); }
-  function askBlock(){
-    var td=Store.get('teamDays',TODAY()+'|'+team);
-    $('dayInfo').textContent=teamName(team)+' · '+nice(TODAY());
-    $('dayBlock').innerHTML=Store.all('blocks').sort(function(a,b){return +a.id-+b.id;}).map(function(b){ return '<option value="'+b.id+'"'+(td&&td.block===b.id?' selected':'')+'>'+esc(b.name)+' · '+esc(vShort(b.variety))+'</option>'; }).join('');
-    open('ovDay');
+  function fillBlocks(){
+    var td=Store.get('teamDays',TODAY()+'|'+team), cur=$('dayBlock').value, bl=Store.all('blocks');
+    $('dayMsg').textContent = bl.length ? '' : 'Loading blocks… If this stays empty, ask Wian or Fanus to load the blocks (Orchards screen).';
+    $('dayOk').disabled = !bl.length;
+    $('dayBlock').innerHTML=bl.sort(function(a,b){return +a.id-+b.id;}).map(function(b){ return '<option value="'+b.id+'"'+(td&&td.block===b.id?' selected':'')+'>'+esc(b.name)+' · '+esc(vShort(b.variety))+'</option>'; }).join('');
+    if (cur && !td) $('dayBlock').value=cur;
   }
-  $('dayOk').onclick=function(){ block=$('dayBlock').value; var id=TODAY()+'|'+team, td=Store.get('teamDays',id);
+  function askBlock(){ $('dayInfo').textContent=teamName(team)+' · '+nice(TODAY()); fillBlocks(); open('ovDay'); }
+  Store.onChange(function(col){ if (col==='blocks' && $('ovDay').classList.contains('on')) fillBlocks(); });
+  $('dayOut').onclick=function(){ close('ovDay'); if (ME.role==='scanner') signOut(); else { Scanner.close(); route(); } };
+  $('dayOk').onclick=function(){ block=$('dayBlock').value; if (!block) return; var id=TODAY()+'|'+team, td=Store.get('teamDays',id);
     if (!td || td.block!==block){ Store.put('teamDays',{id:id,date:TODAY(),team:team,block:block}); Store.log(ME.email, teamName(team)+' picking '+blockById(block).name+' on '+TODAY()); }
-    close('ovDay'); head(); idle(); };
+    close('ovDay'); head(); start(); };       // this tap also switches on band reading
   // keypad
   $('keys').innerHTML=['1','2','3','4','5','6','7','8','9','⌫','0','C'].map(function(x){return '<button data-k="'+x+'">'+x+'</button>';}).join('');
   $('keys').onclick=function(e){ var x=e.target.getAttribute('data-k'); if (!x) return; if (x==='⌫') kp=kp.slice(0,-1); else if (x==='C') kp=''; else if (kp.length<4) kp+=x; $('kpd').textContent=kp; };
@@ -1121,7 +1130,9 @@ var Scanner=(function(){
       if (ME.role!=='scanner'){ team = VIEW.scanTeam || 'T1'; }
       $('smOut').textContent = ME.role!=='scanner' ? 'Back to the office screens' : 'Sign out';
       $('scan').classList.add('on'); scanning=false; $('scStart').style.display=''; head();
-      var td=Store.get('teamDays',TODAY()+'|'+team); if (td){ block=td.block; head(); idle(); } else { idle(); askBlock(); } },
+      var td=Store.get('teamDays',TODAY()+'|'+team); if (td){ block=td.block; head(); idle(); } else { idle(); askBlock(); }
+      // once NFC has been allowed on this phone, start reading straight away (otherwise Android grabs the tap)
+      if (navigator.permissions && 'NDEFReader' in window) navigator.permissions.query({name:'nfc'}).then(function(p){ if (p.state==='granted') start(); }).catch(function(){}); },
     close:function(){ ['scan','ovDay','ovKey','ovLink','ovSToday','ovSMenu'].forEach(close); scanning=false; }
   };
 })();
