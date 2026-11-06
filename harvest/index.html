@@ -290,7 +290,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.1';
+var APP_VERSION = '1.1.1';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -422,6 +422,8 @@ function maxBand(){ var m=60; Store.all('bands').forEach(function(b){ m=Math.max
 function freeBands(){ var used={}, a=[]; Store.where('workers',function(w){return w.active;}).forEach(function(w){ used[w.no]=1; });
   for (var i=1;i<=maxBand();i++) if (!used[i]) a.push(i);
   return a.sort(function(x,y){ return (hasChip(y)?1:0)-(hasChip(x)?1:0) || x-y; }); }
+// change-log names: older entries stored the login email; show the person's name instead
+function whoName(w){ if (!w || String(w).indexOf('@')<0) return w||''; var u=Store.where('users',function(x){return x.email===w;})[0]; return u&&u.name ? u.name : String(w).split('@')[0]; }
 function lastPicked(wid){ var d=''; Store.where('pickerDays',function(p){return p.workerId===wid && bagsOf(p)>0;}).forEach(function(p){ if (p.date>d) d=p.date; }); return d; }
 function saveBand(no, chip, who){ var b=bandFor(no), olds=(b&&b.oldUids)||[];
   if (b && b.uid && b.uid!==chip) olds=olds.concat([b.uid]);
@@ -976,7 +978,7 @@ VIEWS.settings=function(el){
     '<div class="acts"><button class="btn p" id="sSave2">Save</button></div></div></div>';
   var audit=Store.all('audit').sort(function(a,b){return b.t-a.t;}).slice(0,40);
   h+='<div class="card"><h3>Change log</h3><div class="small mute" style="margin-bottom:6px">Every correction, loan, bin entry and setting change, with who and when.</div>'+
-    audit.map(function(a){ var d=new Date(a.t); return '<div class="list-row small"><span class="mute num" style="width:96px;flex:none">'+d.getDate()+' '+MON[d.getMonth()]+' '+hm(a.t)+'</span><b style="width:70px;flex:none">'+esc(a.who)+'</b><span>'+esc(a.what)+'</span></div>'; }).join('')+'</div>';
+    audit.map(function(a){ var d=new Date(a.t); return '<div class="list-row small" style="align-items:flex-start"><span class="mute num" style="width:96px;flex:none">'+d.getDate()+' '+MON[d.getMonth()]+' '+hm(a.t)+'</span><b style="width:110px;flex:none;overflow-wrap:anywhere">'+esc(whoName(a.who))+'</b><span>'+esc(a.what)+'</span></div>'; }).join('')+'</div>';
   if (ME.role==='admin'){
     var us=Store.all('users').sort(function(a,b){ return (a.role==='pending'?0:1)-(b.role==='pending'?0:1) || String(a.email).localeCompare(b.email); });
     h+='<div class="card"><h3>People who can sign in</h3><div class="small mute" style="margin-bottom:6px">Create the login in the Firebase console (Authentication, Users). The person signs in once, then appears here as waiting. Give them access below.</div><div class="tw"><table><thead><tr><th>Email</th><th>Name</th><th>Access</th></tr></thead><tbody>'+
@@ -1147,7 +1149,7 @@ var Scanner=(function(){
   Store.onChange(function(col){ if (col==='blocks' && $('ovDay').classList.contains('on')) fillBlocks(); });
   $('dayOut').onclick=function(){ close('ovDay'); if (ME.role==='scanner') signOut(); else { Scanner.close(); route(); } };
   $('dayOk').onclick=function(){ block=$('dayBlock').value; if (!block) return; var id=TODAY()+'|'+team, td=Store.get('teamDays',id);
-    if (!td || td.block!==block){ Store.put('teamDays',{id:id,date:TODAY(),team:team,block:block}); Store.log(ME.email, teamName(team)+' picking '+blockById(block).name+' on '+TODAY()); }
+    if (!td || td.block!==block){ Store.put('teamDays',{id:id,date:TODAY(),team:team,block:block}); Store.log(ME.name, teamName(team)+' picking '+blockById(block).name+' on '+TODAY()); }
     close('ovDay'); head(); start(); };       // this tap also switches on band reading
   // keypad
   $('keys').innerHTML=['1','2','3','4','5','6','7','8','9','⌫','0','C'].map(function(x){return '<button data-k="'+x+'">'+x+'</button>';}).join('');
@@ -1165,7 +1167,7 @@ var Scanner=(function(){
     var other=bandByChip(linkUid); if (other && +other.no!==no){ $('lMsg').textContent='This chip is already band '+other.no+'.'; return; }
     var b=bandFor(no);
     if (b && b.uid && b.uid!==linkUid && !replace){ $('lMsg').textContent='Band '+no+' already has a chip. Is this a new band replacing a lost or broken band '+no+'?'; $('lReplace').classList.remove('hide'); return; }
-    saveBand(no, linkUid, ME.email); var w=wearer(no);
+    saveBand(no, linkUid, ME.name); var w=wearer(no);
     close('ovLink'); fb('ok'); show('#15803d', replace?'BAND '+no+' REPLACED':'BAND '+no+' LINKED', w?wName(w)+'  #'+no:'Not given to anyone yet', '', w?'Tap again to count a bag.':'Give it to a worker in Settings.', 3500); }
   // link many bands in number order, no typing
   var seq=1, linkOnly=false;
@@ -1175,7 +1177,7 @@ var Scanner=(function(){
   function linkSeq(u){ var other=bandByChip(u);
     if (other && +other.no===seq){ fb('dup'); seq++; return seqShow('Band '+(seq-1)+' was already linked. Next: band '+seq+'.','#fbbf24'); }
     if (other){ fb('bad'); return seqShow('That band is already number '+other.no+'. Tap band '+seq+'.','#f87171'); }
-    saveBand(seq,u,ME.email); fb('ok'); seq++; seqShow('✓ Band '+(seq-1)+' linked. Next: band '+seq+'.'); }
+    saveBand(seq,u,ME.name); fb('ok'); seq++; seqShow('✓ Band '+(seq-1)+' linked. Next: band '+seq+'.'); }
   function openBands(){ seq=1; while (hasChip(seq) && seq<maxBand()) seq++; seqShow(''); open('ovBands'); start(); }
   $('bnBack').onclick=function(){ seq=Math.max(1,seq-1); seqShow(''); };
   $('bnSkip').onclick=function(){ seq++; seqShow(''); };
