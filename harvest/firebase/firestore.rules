@@ -36,7 +36,14 @@ service cloud.firestore {
     match /workers/{id} {
       allow read: if staff();
       allow create, delete: if office();
-      allow update: if office() || (scanner() && onlyKeys(['uid', 'oldUids']));
+      allow update: if office();
+    }
+
+    // numbered bands: which chip belongs to which band number (phones may link and replace chips)
+    match /bands/{id} {
+      allow read: if staff();
+      allow create, update: if office() || (scanner() && onlyKeys(['no', 'uid', 'oldUids', 'at', 'by']));
+      allow delete: if office();
     }
 
     // block per team per day
@@ -46,7 +53,7 @@ service cloud.firestore {
     match /pickerDays/{id} {
       allow read: if staff();
       allow create, update: if office()
-        || (scanner() && onlyKeys(['date', 'workerId', 'team', 'block', 'bags', 'manual', 'first', 'last', 'h']));
+        || (scanner() && onlyKeys(['date', 'workerId', 'team', 'block', 'no', 'bags', 'manual', 'first', 'last', 'h']));
       allow delete: if office();
     }
 

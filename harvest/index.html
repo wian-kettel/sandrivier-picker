@@ -88,6 +88,10 @@ input[type=text],input[type=number],input[type=date],input[type=time],input[type
 input.cell{width:84px;padding:6px 8px;text-align:right}
 label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10px 0 4px}
 .fr{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 12px}
+.bandgrid{display:flex;flex-wrap:wrap;gap:6px}
+.bandcell{width:40px;height:34px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:650;background:var(--soft);color:var(--mute);cursor:pointer;border:1.5px solid transparent}
+.bandcell.worn{background:var(--green);color:#fff}.bandcell.free{background:var(--green-s);color:var(--green);border-color:#bcd6c3}.bandcell.nochip{background:var(--amber-s);color:var(--amber);border-color:#efd9ae}
+.legend i.lg{width:12px;height:12px;border-radius:3px;background:var(--soft)}.legend i.lg.worn{background:var(--green)}.legend i.lg.free{background:var(--green-s);border:1px solid #bcd6c3}.legend i.lg.nochip{background:var(--amber-s);border:1px solid #efd9ae}
 .check{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800;color:#fff}
 .check.on{background:var(--green);border-color:var(--green)}
 .note{background:var(--amber-s);border:1px solid #efd9ae;color:#6b4510;border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:14px}
@@ -236,13 +240,24 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
   <div style="text-align:center;color:#94a3b8;font-size:14px;margin-top:4px">Stays open so you can type bag after bag. Press Done when finished.</div>
 </div>
 <div class="sov" id="ovLink">
-  <h2>Band not linked</h2>
+  <h2>New band</h2>
   <div id="lUid" style="color:#94a3b8"></div>
-  <label>Picker number to link this band to</label>
+  <label>Which number is written on this band?</label>
   <input id="lNo" inputmode="numeric" autocomplete="off">
   <div class="smsg" id="lMsg"></div>
   <div class="row"><button id="lCancel">Cancel</button><button class="p" id="lOk">Link band</button></div>
-  <div class="row"><button id="lReplace" class="hide" style="background:#b45309">Yes, replace the old band</button></div>
+  <div class="row"><button id="lReplace" class="hide" style="background:#b45309">Yes, it replaces a lost or broken band</button></div>
+</div>
+<div class="sov" id="ovBands">
+  <h2>Link bands</h2>
+  <div style="color:#94a3b8">Tap each band in number order. The number must be written on the band.</div>
+  <div style="text-align:center;margin-top:18px;color:#94a3b8">Tap band</div>
+  <div class="kpd" id="bnNo" style="font-size:110px;line-height:1"></div>
+  <div id="bnStat" style="text-align:center;color:#94a3b8;min-height:22px"></div>
+  <div class="smsg" id="bnMsg"></div>
+  <div class="row"><button id="bnBack">◀ Back</button><button id="bnSkip">Skip ▶</button></div>
+  <div class="row"><input id="bnStart" inputmode="numeric" placeholder="Jump to number" style="flex:1"><button id="bnGo" style="flex:0 0 90px">Go</button></div>
+  <div class="row"><button class="p" id="bnDone">Done</button></div>
 </div>
 <div class="sov" id="ovSToday">
   <h2>Today, your team</h2>
@@ -253,6 +268,7 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
   <h2>Menu</h2>
   <div id="smInfo" style="color:#94a3b8;line-height:1.6"></div>
   <div class="row"><button id="smBlock">Change block</button></div>
+  <div class="row"><button id="smBands">Link bands</button></div>
   <div class="row"><button id="smOut">Sign out</button></div>
   <div class="row"><button class="p" id="smClose">Close</button></div>
 </div>
@@ -274,7 +290,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.0.1';
+var APP_VERSION = '1.1';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -315,7 +331,7 @@ function TODAY(){ return ymd(NOW()); }
    ===================================================================== */
 var Store = (function(){
   var fb=null, db=null, mem={}, ready={}, subs=[], listeners=[], pending=0, failed=0, lastErr='';
-  var COLS=['settings','workers','blocks','bloom','teamDays','pickerDays','bins','loans','attendance','paidWeeks','audit','users','dayFlags'];
+  var COLS=['settings','workers','bands','blocks','bloom','teamDays','pickerDays','bins','loans','attendance','paidWeeks','audit','users','dayFlags'];
   COLS.forEach(function(c){ mem[c]={}; });
   function clean(o){ var x={}; for (var k in o) if (k!=='id' && o[k]!==undefined) x[k]=o[k]; return x; }
   function notify(col){ listeners.forEach(function(f){ f(col); }); }
@@ -352,6 +368,7 @@ var Store = (function(){
       subscribe('settings', collection(db,'settings'));
       subscribe('workers', collection(db,'workers'));
       subscribe('blocks', collection(db,'blocks'));
+      subscribe('bands', collection(db,'bands'));
       if (role==='scanner'){
         subscribe('teamDays', query(collection(db,'teamDays'), where('date','==',today)));
         subscribe('pickerDays', query(collection(db,'pickerDays'), where('date','==',today)));
@@ -395,6 +412,21 @@ function teamName(id){ var t=S().teams.filter(function(x){return x.id===id;})[0]
 function worker(id){ return Store.get('workers',id); }
 function wName(w){ return w ? (w.first+' '+w.last).trim() : '?'; }
 function blockById(id){ return Store.get('blocks',id); }
+// Bands are numbered (number written on the band) and keep their number all season.
+// A worker wears a band number while they work here; their bags stay with the worker, not the band.
+function bandFor(no){ return Store.get('bands', String(no)); }
+function bandByChip(u){ return Store.where('bands',function(b){ return b.uid===u; })[0]||null; }
+function hasChip(no){ var b=bandFor(no); return !!(b&&b.uid); }
+function wearer(no){ return Store.where('workers',function(w){ return w.active && String(w.no)===String(no); })[0]||null; }
+function maxBand(){ var m=60; Store.all('bands').forEach(function(b){ m=Math.max(m,+b.no||0); }); Store.all('workers').forEach(function(w){ m=Math.max(m,+w.no||0); }); return m; }
+function freeBands(){ var used={}, a=[]; Store.where('workers',function(w){return w.active;}).forEach(function(w){ used[w.no]=1; });
+  for (var i=1;i<=maxBand();i++) if (!used[i]) a.push(i);
+  return a.sort(function(x,y){ return (hasChip(y)?1:0)-(hasChip(x)?1:0) || x-y; }); }
+function lastPicked(wid){ var d=''; Store.where('pickerDays',function(p){return p.workerId===wid && bagsOf(p)>0;}).forEach(function(p){ if (p.date>d) d=p.date; }); return d; }
+function saveBand(no, chip, who){ var b=bandFor(no), olds=(b&&b.oldUids)||[];
+  if (b && b.uid && b.uid!==chip) olds=olds.concat([b.uid]);
+  Store.put('bands',{id:String(no),no:+no,uid:chip,oldUids:olds,at:Date.now(),by:who});
+  Store.log(who,(b&&b.uid&&b.uid!==chip?'Replaced chip for band ':'Linked chip to band ')+no+': '+chip); }
 
 // picking minutes between two clock minutes, counting only the picking sessions
 function sessions(){ return S().sessions.map(function(s){ return [hmToMin(s[0]),hmToMin(s[1])]; }); }
@@ -501,6 +533,7 @@ function onUser(user){
     Store.start(ME.role==='scanner'?'scanner':ME.role);
     whenReady(function(){
       if (!S() && ME.role!=='scanner') Store.setSettings(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), ME.name, 'Created default settings');
+      if (ME.role!=='scanner' && !Store.all('bands').length) Store.where('workers',function(w){ return w.uid; }).forEach(function(w){ saveBand(w.no, w.uid, ME.name); });
       if (!S()) { gateMsg('The farm settings are not set up yet. Ask Wian to sign in on a computer first.<br><br><a href="#" id="gOut" style="color:#fff">Sign out</a>'); bindOut(); showGate(); return; }
       if (ME.role==='scanner') Scanner.open(); else { $('userBtn').textContent=ME.name+' ▾'; route(); }
     });
@@ -545,7 +578,7 @@ var TABS=[['today','Today'],['pickers','Pickers'],['bins','Bins'],['pay','Pay'],
 var VIEW={};    // per-view state
 function go(t){ location.hash='#'+t; }
 function route(){
-  if (!ME || (ME.role!=='office' && ME.role!=='admin') || $('scan').classList.contains('on')) return;
+  if (!ME || (ME.role!=='office' && ME.role!=='admin') || $('scan').classList.contains('on') || !S()) return;
   var t=(location.hash||'#today').slice(1).split('/')[0]; if (!VIEWS[t]) t='today';
   $('tabs').innerHTML=TABS.map(function(x){ return '<button class="tab'+(x[0]===t?' on':'')+'" data-t="'+x[0]+'">'+x[1]+'</button>'; }).join('');
   syncPill();
@@ -668,7 +701,9 @@ VIEWS.today=function(el){
   if (!Store.all('workers').length) attn.push('No workers yet. Add them in <a href="#settings">Settings</a>.');
   pds.forEach(function(p){ if (p.manual>=3) attn.push('<b>'+esc(wName(worker(p.workerId)))+'</b> #'+worker(p.workerId).no+': '+p.manual+' bags typed by hand. Band may be faulty.'); });
   var unk=(Store.get('dayFlags',date)||{}).unknown||0;
-  if (unk) attn.push(unk+' taps from bands that are not linked to anyone.');
+  if (unk) attn.push(unk+' taps from bands whose chip is not linked to a band number.');
+  var una=(Store.get('dayFlags',date)||{}).unassigned||0;
+  if (una) attn.push(una+' taps from bands that are not given to anyone. Check who is wearing them.');
   if (attn.length) h+='<div class="card"><h3>Needs attention</h3>'+attn.map(function(a){return '<div class="list-row">'+a+'</div>';}).join('')+'</div>';
   el.innerHTML=h;
   $('tdDate').onchange=function(){ VIEW.todayDate=this.value||null; route(); };
@@ -709,7 +744,7 @@ function pickerModal(wid){
   var w=worker(wid), today=TODAY();
   var pds=Store.where('pickerDays',function(p){return p.workerId===wid;}).sort(function(a,b){return a.date<b.date?1:-1;});
   var tot=pds.reduce(function(a,p){return a+bagsOf(p);},0);
-  var h='<h2>'+esc(wName(w))+' <span class="mute">#'+w.no+'</span></h2><div class="small mute" style="margin:4px 0 12px">'+esc(teamName(w.team))+' · '+(w.pay==='day'?'Day worker, paid per bag':'Contract worker, performance only')+' · band '+(w.uid?esc(w.uid):'not linked')+'</div>'+
+  var h='<h2>'+esc(wName(w))+' <span class="mute">#'+w.no+'</span></h2><div class="small mute" style="margin:4px 0 12px">'+esc(teamName(w.team))+' · '+(w.pay==='day'?'Day worker, paid per bag':'Contract worker, performance only')+' · band '+w.no+(hasChip(w.no)?'':' (no chip linked yet)')+(w.active?'':' · has left')+'</div>'+
     '<div class="stats" style="margin-bottom:12px"><div class="stat"><b>'+fmt(tot)+'</b><span>bags this season</span></div><div class="stat"><b>'+pds.length+'</b><span>days picked</span></div><div class="stat"><b>'+(pds.length?fmt(tot/pds.length):0)+'</b><span>average a day</span></div></div>'+
     '<table><thead><tr><th>Day</th><th>Block</th><th class="r">Scanned</th><th class="r">Correction</th><th class="r">Bags</th></tr></thead><tbody>'+
     pds.map(function(p){ var b=blockById(p.block); return '<tr><td>'+nice(p.date)+'</td><td>'+(b?esc(b.name):'')+'</td><td class="r num">'+p.bags+(p.manual?' <span class="tiny mute">('+p.manual+' typed)</span>':'')+'</td><td class="r num">'+(p.adj?(p.adj>0?'+':'')+p.adj+(p.adjWhy?' <span class="tiny mute" title="'+esc(p.adjWhy)+'">ⓘ</span>':''):'')+'</td><td class="r num"><b>'+bagsOf(p)+'</b></td></tr>'; }).join('')+
@@ -914,14 +949,22 @@ function blockModal(id){
 /* ---------------- SETTINGS ---------------- */
 VIEWS.settings=function(el){
   var st=S(), q=(VIEW.wQ||'').toLowerCase(), showAll=!!VIEW.wAll;
-  var ws=Store.where('workers',function(w){ return (showAll||w.active) && (!q || (wName(w)+' '+w.no+' '+w.uid).toLowerCase().indexOf(q)>=0); }).sort(function(a,b){return a.no-b.no;});
-  var unlinked=Store.where('workers',function(w){return w.active && w.role==='picker' && !w.uid;}).length;
+  var ws=Store.where('workers',function(w){ return (showAll||w.active) && (!q || (wName(w)+' '+w.no).toLowerCase().indexOf(q)>=0); }).sort(function(a,b){return a.no-b.no;});
+  var unlinked=Store.where('workers',function(w){return w.active && w.role==='picker' && !hasChip(w.no);}).length;
   var h='<div class="bar"><h2>Settings</h2></div>';
   h+='<div class="card"><div class="bar" style="margin-bottom:8px"><h3 style="margin:0;margin-right:auto">Workers</h3><input type="search" id="wQ" placeholder="Search" value="'+esc(VIEW.wQ||'')+'" style="max-width:200px"><button class="btn" id="bulkW">Paste a list</button><button class="btn p" id="addW">+ Add worker</button></div>'+
-    (unlinked?'<div class="note">'+unlinked+' active picker'+(unlinked>1?'s have':' has')+' no band linked yet.</div>':'')+
-    '<div class="tw"><table><thead><tr><th>#</th><th>Name</th><th>Work</th><th class="hide-m">Paid</th><th class="hide-m">Team</th><th>Band</th><th class="hide-m">Status</th></tr></thead><tbody>'+
-    ws.map(function(w){ return '<tr class="click" data-w="'+w.id+'"'+(w.active?'':' style="opacity:.5"')+'><td class="num">'+w.no+'</td><td><b>'+esc(wName(w))+'</b></td><td>'+(w.role==='picker'?'Picker':'Sorter')+'</td><td class="hide-m">'+(w.pay==='day'?'Day':'Contract')+'</td><td class="hide-m">'+esc(teamName(w.team))+'</td><td>'+(w.uid?'<span class="tag g">Linked</span>':(w.role==='picker'?'<span class="tag a">No band</span>':'<span class="mute small">n/a</span>'))+'</td><td class="hide-m">'+(w.active?'Active':'Left')+'</td></tr>'; }).join('')+
+    (unlinked?'<div class="note">'+unlinked+' active picker'+(unlinked>1?'s wear':' wears')+' a band number with no chip linked yet. Link the bands below.</div>':'')+
+    '<div class="tw"><table><thead><tr><th>#</th><th>Name</th><th>Work</th><th class="hide-m">Paid</th><th class="hide-m">Team</th><th>Band</th><th class="hide-m">Last picked</th><th class="hide-m">Status</th></tr></thead><tbody>'+
+    ws.map(function(w){ return '<tr class="click" data-w="'+w.id+'"'+(w.active?'':' style="opacity:.5"')+'><td class="num">'+w.no+'</td><td><b>'+esc(wName(w))+'</b></td><td>'+(w.role==='picker'?'Picker':'Sorter')+'</td><td class="hide-m">'+(w.pay==='day'?'Day':'Contract')+'</td><td class="hide-m">'+esc(teamName(w.team))+'</td><td>'+(w.role!=='picker'?'<span class="mute small">n/a</span>':!w.active?'<span class="mute small">returned</span>':hasChip(w.no)?'<span class="tag g">Linked</span>':'<span class="tag a">No chip</span>')+'</td><td class="hide-m small">'+(function(d){return d?niceShort(d):'';})(lastPicked(w.id))+'</td><td class="hide-m">'+(w.active?'Active':'Left')+'</td></tr>'; }).join('')+
     '</tbody></table></div><label class="small" style="display:inline-flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="wAll"'+(showAll?' checked':'')+'> Show workers who have left</label></div>';
+  // bands
+  var bmax=maxBand(), nLinked=0, nWorn=0, cells='';
+  for (var bn=1; bn<=bmax; bn++){ var ch=hasChip(bn), wr=wearer(bn); if (ch) nLinked++; if (wr) nWorn++;
+    cells+='<span class="bandcell'+(ch?(wr?' worn':' free'):(wr?' nochip':''))+'" data-bn="'+bn+'" title="'+(wr?esc(wName(wr)):'free')+'">'+bn+'</span>'; }
+  h+='<div class="card"><div class="bar" style="margin-bottom:6px"><h3 style="margin:0;margin-right:auto">Bands</h3>'+('NDEFReader' in window?'<button class="btn p" id="linkBands">Link bands on this phone</button>':'')+'</div>'+
+    '<div class="small mute" style="margin-bottom:8px">'+nLinked+' bands have a chip linked · '+nWorn+' being worn · '+(nLinked-Store.where('workers',function(w){return w.active && hasChip(w.no);}).length)+' linked and free to hand out. '+
+    ('NDEFReader' in window?'':'To link bands, use the FORT 1: Menu, then Link bands.')+'</div><div class="bandgrid">'+cells+'</div>'+
+    '<div class="legend"><span><i class="lg worn"></i>Worn</span><span><i class="lg free"></i>Linked, free</span><span><i class="lg nochip"></i>Worn, no chip yet</span><span><i class="lg"></i>Not linked</span></div></div>';
   h+='<div class="grid g2"><div class="card"><h3>Pay and bins</h3><div class="fr">'+
     '<div><label class="f">Rate per bag (R)</label><input type="number" step="0.05" min="0" id="sRate" value="'+st.ratePerBag+'"></div>'+
     '<div><label class="f">Bags per bin</label><input type="number" min="20" max="80" id="sBpb" value="'+st.bagsPerBin+'"></div>'+
@@ -959,58 +1002,80 @@ VIEWS.settings=function(el){
     Store.update('users',id,{role:p[0], team:p[1]||null}); Store.log(ME.name,'Access for '+u.email+': '+sel.options[sel.selectedIndex].text); toast('Saved'); }; });
   el.querySelectorAll('[data-un]').forEach(function(inp){ inp.onchange=function(){ Store.update('users',inp.getAttribute('data-un'),{name:inp.value.trim()}); toast('Saved'); }; });
   $('bulkW').onclick=bulkWorkers;
+  if ($('linkBands')) $('linkBands').onclick=function(){ Scanner.openLink(); };
+  el.querySelectorAll('[data-bn]').forEach(function(c){ c.onclick=function(){ bandModal(+c.getAttribute('data-bn')); }; });
 };
 
 function bulkWorkers(){
-  modal('<h2>Add workers from a list</h2><p class="small mute">One worker per line: number, name, surname. For example <b>12 Sipho Adams</b>. Copy it from Fanus\'s list or a spreadsheet. Everyone on the list gets the settings below; change individuals afterwards.</p>'+
+  modal('<h2>Add workers from a list</h2><p class="small mute">One worker per line: band number, name, surname. For example <b>12 Sipho Adams</b>. Copy it from Fanus\'s list or a spreadsheet. Everyone on the list gets the settings below; change individuals afterwards.</p>'+
     '<textarea id="bwT" rows="10" placeholder="1 Sipho Adams&#10;2 Thandiwe Booysen"></textarea><div class="fr">'+
     '<div><label class="f">Work</label><select id="bwR"><option value="picker">Picker</option><option value="sorter">Sorter</option></select></div>'+
     '<div><label class="f">Paid</label><select id="bwP"><option value="day">Day worker</option><option value="contract">Contract</option></select></div>'+
     '<div><label class="f">Team</label><select id="bwTm">'+S().teams.map(function(t){return '<option value="'+t.id+'">'+esc(t.name)+'</option>';}).join('')+'</select></div></div>'+
+    '<label class="small" style="display:inline-flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="bwSame"> Add people with the same name as someone who left (they are different people)</label>'+
     '<div id="bwMsg" class="small" style="margin-top:10px;color:var(--red)"></div><div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Add</button></div>',
   { ok:function(){
       var lines=$('bwT').value.split(/\n/).map(function(l){return l.trim();}).filter(Boolean), add=[], bad=[], seen={};
-      var taken={}; Store.where('workers',function(w){return w.active;}).forEach(function(w){ taken[w.no]=wName(w); });
+      var taken={}, before={}; Store.where('workers',function(w){return w.active;}).forEach(function(w){ taken[w.no]=wName(w); });
+      Store.where('workers',function(w){return !w.active;}).forEach(function(w){ before[wName(w).toLowerCase()]=w; });
       lines.forEach(function(l){ var m=l.match(/^#?(\d+)[\s,;.:\t-]+(.+)$/); if (!m){ bad.push(l+' (no number)'); return; }
         var no=+m[1], parts=m[2].replace(/[,;\t]+/g,' ').trim().split(/\s+/), first=parts.shift(), last=parts.join(' ');
-        if (taken[no]) bad.push(no+' is already '+taken[no]); else if (seen[no]) bad.push(no+' appears twice'); else { seen[no]=1; add.push({no:no,first:first,last:last}); } });
+        var prev=before[(first+' '+last).trim().toLowerCase()];
+        if (taken[no]) bad.push('Band '+no+' is already worn by '+taken[no]); else if (seen[no]) bad.push(no+' appears twice');
+        else if (prev && !$('bwSame').checked) bad.push(first+' '+last+' worked here before. Open them under Show workers who have left and tap Came back, so their history stays together. (Or tick the box below if it is a different person.)'); else { seen[no]=1; add.push({no:no,first:first,last:last}); } });
       if (bad.length){ $('bwMsg').innerHTML='Fix these first:<br>'+bad.map(esc).join('<br>'); return; }
       if (!add.length) return toast('Nothing to add');
-      add.forEach(function(a){ Store.put('workers',{id:'w'+uid(),no:a.no,first:a.first,last:a.last,role:$('bwR').value,pay:$('bwP').value,team:$('bwTm').value,uid:'',oldUids:[],active:true}); });
+      add.forEach(function(a){ Store.put('workers',{id:'w'+uid(),no:a.no,first:a.first,last:a.last,role:$('bwR').value,pay:$('bwP').value,team:$('bwTm').value,active:true}); });
       Store.log(ME.name,'Added '+add.length+' workers from a list'); closeModal(); toast(add.length+' workers added'); route(); } });
 }
 function workerModal(id){
-  var w=id?JSON.parse(JSON.stringify(worker(id))):{id:'w'+uid(),no:'',first:'',last:'',role:'picker',pay:'day',team:'T1',uid:'',oldUids:[],active:true};
-  var nfc='NDEFReader' in window;
+  var w=id?JSON.parse(JSON.stringify(worker(id))):{id:'w'+uid(),no:(freeBands()[0]||''),first:'',last:'',role:'picker',pay:'day',team:'T1',active:true};
   var opt=function(k,v,l){ return '<option value="'+v+'"'+(w[k]===v?' selected':'')+'>'+l+'</option>'; };
+  var free=freeBands(), lp=id?lastPicked(id):'';
+  var bandBox = !id ? '' : w.active
+    ? '<div class="card" style="background:var(--soft);box-shadow:none;margin-top:14px"><h3>Band '+w.no+'</h3><div class="small" style="margin-bottom:10px">'+(hasChip(w.no)?'Chip linked.':'<span style="color:var(--amber)">No chip linked to band '+w.no+' yet.</span> Tap it on the FORT 1 (it asks for the number).')+(lp?' Last picked '+nice(lp)+'.':'')+'</div>'+
+      '<button class="btn w" data-a="leave">Left: hand band '+w.no+' back</button><div class="small mute" style="margin-top:6px">Their bags and pay stay with them. Band '+w.no+' is free for the next person.</div></div>'
+    : '<div class="card" style="background:var(--soft);box-shadow:none;margin-top:14px"><h3>Came back?</h3><div class="small" style="margin-bottom:8px">Left earlier'+(lp?', last picked '+nice(lp):'')+'. Give them a free band; their history carries on.</div>'+
+      '<div class="fr"><div><label class="f">Band to give</label><select id="wk_give">'+free.map(function(n){ return '<option value="'+n+'"'+(n===w.no?' selected':'')+'>Band '+n+(hasChip(n)?'':' (no chip yet)')+'</option>'; }).join('')+'</select></div></div>'+
+      '<div class="acts" style="justify-content:flex-start"><button class="btn p" data-a="back">Came back: give this band</button></div></div>';
   modal('<h2>'+(id?esc(wName(w)):'New worker')+'</h2><div class="fr">'+
-    '<div><label class="f">Number</label><input type="number" id="wk_no" value="'+esc(w.no)+'" inputmode="numeric"></div>'+
+    (id && !w.active ? '' : '<div><label class="f">Band number</label><input type="number" id="wk_no" value="'+esc(w.no)+'" inputmode="numeric"></div>')+
     '<div><label class="f">Name</label><input type="text" id="wk_first" value="'+esc(w.first)+'"></div>'+
     '<div><label class="f">Surname</label><input type="text" id="wk_last" value="'+esc(w.last)+'"></div>'+
     '<div><label class="f">Work</label><select id="wk_role">'+opt('role','picker','Picker')+opt('role','sorter','Sorter')+'</select></div>'+
     '<div><label class="f">Paid</label><select id="wk_pay">'+opt('pay','day','Day worker')+opt('pay','contract','Contract')+'</select></div>'+
     '<div><label class="f">Team</label><select id="wk_team">'+S().teams.map(function(t){return opt('team',t.id,esc(t.name));}).join('')+'</select></div></div>'+
-    '<div class="card" style="background:var(--soft);box-shadow:none;margin-top:14px"><h3>Band</h3><div id="bandNow" class="small" style="margin-bottom:8px">'+(w.uid?'Linked: <b>'+esc(w.uid)+'</b>'+(w.oldUids&&w.oldUids.length?' <span class="mute">(old: '+w.oldUids.map(esc).join(', ')+')</span>':''):'<span class="mute">No band linked.</span>')+'</div>'+
-    (nfc?'<button class="btn p" data-a="read">'+(w.uid?'Replace band: tap the new band':'Tap a band on this phone')+'</button>':'<div class="small mute">This device cannot read bands (only Android phones with Chrome can, like Fanus\'s Samsung or the FORT 1). Type the band number, or link it on the FORT 1.</div>')+
-    '<label class="f">Or type the band number</label><input type="text" id="wk_uid" value="'+esc(w.uid)+'" placeholder="e.g. 04:AE:33:4A:A3:0F:90"></div>'+
-    '<label class="small" style="display:inline-flex;gap:6px;align-items:center;margin-top:12px"><input type="checkbox" id="wk_active"'+(w.active?' checked':'')+'> Active (untick when the worker leaves; their history stays)</label>'+
+    bandBox+
     '<div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Save</button></div>',
-    { read:function(btn){
-        btn.textContent='Hold the band against the back of the phone…';
-        try { var r=new NDEFReader(); r.scan().then(function(){ r.onreading=function(ev){ $('wk_uid').value=normUid(ev.serialNumber); btn.textContent='Band read ✓'; }; })
-          .catch(function(e){ btn.textContent='Could not start NFC: '+(e.message||e.name); }); } catch(e){ btn.textContent='NFC error'; } },
+    { leave:function(){ Store.update('workers',w.id,{active:false, leftAt:TODAY()}); Store.log(ME.name, wName(w)+' left, band '+w.no+' handed back'); closeModal(); route(); toast('Band '+w.no+' is free'); },
+      back:function(){ var n=+$('wk_give').value; if (wearer(n)) return toast('Band '+n+' is already worn by '+wName(wearer(n)));
+        Store.update('workers',w.id,{active:true, no:n, backAt:TODAY()}); Store.log(ME.name, wName(w)+' came back, given band '+n); closeModal(); route(); toast(wName(w)+' now wears band '+n); },
       ok:function(){
-        var no=parseInt($('wk_no').value,10), first=$('wk_first').value.trim(), last=$('wk_last').value.trim(), band=normUid($('wk_uid').value);
-        if (!no) return toast('Give the worker a number');
+        var no = $('wk_no') ? parseInt($('wk_no').value,10) : w.no, first=$('wk_first').value.trim(), last=$('wk_last').value.trim();
+        if (!no) return toast('Give the worker a band number');
         if (!first) return toast('Enter a name');
-        var clash=Store.where('workers',function(x){ return x.id!==w.id && x.active && x.no===no; })[0];
-        if (clash) return toast('Number '+no+' is already '+wName(clash));
-        if (band){ var bc=Store.where('workers',function(x){ return x.id!==w.id && x.uid===band; })[0]; if (bc) return toast('That band is already linked to '+wName(bc)+' #'+bc.no); }
-        var old=worker(w.id), msg=[];
-        if (old && old.uid && old.uid!==band){ w.oldUids=(w.oldUids||[]).concat([old.uid]); msg.push('band replaced'); }
-        w.no=no; w.first=first; w.last=last; w.role=$('wk_role').value; w.pay=$('wk_pay').value; w.team=$('wk_team').value; w.uid=band; w.active=$('wk_active').checked;
-        Store.put('workers',w); Store.log(ME.name,(old?'Updated ':'Added ')+wName(w)+' #'+no+(msg.length?' ('+msg.join(', ')+')':'')+(band&&(!old||old.uid!==band)?', band '+band:''));
+        if (w.active){ var clash=Store.where('workers',function(x){ return x.id!==w.id && x.active && x.no===no; })[0];
+          if (clash) return toast('Band '+no+' is already worn by '+wName(clash)); }
+        if (!id){ var prev=Store.where('workers',function(x){ return !x.active && wName(x).toLowerCase()===(first+' '+last).trim().toLowerCase(); })[0];
+          if (prev && !w._sure){ w._sure=true; return toast(first+' '+last+' worked here before. To keep their history, open them under Show workers who have left. Press Save again if this is a different person.'); } }
+        var old=worker(w.id); delete w._sure;
+        w.no=no; w.first=first; w.last=last; w.role=$('wk_role').value; w.pay=$('wk_pay').value; w.team=$('wk_team').value;
+        Store.put('workers',w); Store.log(ME.name,(old?'Updated ':'Added ')+wName(w)+', band '+no+(old&&old.no!==no?' (was '+old.no+')':''));
         closeModal(); route(); toast('Saved'); } });
+}
+function bandModal(no){
+  var b=bandFor(no), w=wearer(no), nfc='NDEFReader' in window;
+  modal('<h2>Band '+no+'</h2><p class="small">'+(w?'Worn by <b>'+esc(wName(w))+'</b> ('+(w.pay==='day'?'day worker':'contract')+', '+esc(teamName(w.team))+')':'Not worn by anyone.')+'</p>'+
+    '<p class="small mute">'+(b&&b.uid?'Chip: '+esc(b.uid)+(b.oldUids&&b.oldUids.length?'<br>Earlier chips (replaced): '+b.oldUids.map(esc).join(', '):''):'No chip linked yet.')+'</p>'+
+    (nfc?'<button class="btn p" data-a="read">'+(b&&b.uid?'Replace: tap the new band on this phone':'Tap the band on this phone')+'</button>':'')+
+    '<label class="f">Or type the chip number</label><input type="text" id="bdUid" value="'+esc(b&&b.uid||'')+'" placeholder="e.g. 04:AE:33:4A:A3:0F:90">'+
+    '<div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn p" data-a="ok">Save</button></div>',
+    { read:function(btn){ btn.textContent='Hold the band against the back of the phone…';
+        try { var r=new NDEFReader(); r.scan().then(function(){ r.onreading=function(ev){ $('bdUid').value=normUid(ev.serialNumber); btn.textContent='Band read ✓'; }; })
+          .catch(function(e){ btn.textContent='Could not start NFC: '+(e.message||e.name); }); } catch(e){ btn.textContent='NFC error'; } },
+      ok:function(){ var u=normUid($('bdUid').value); if (!u) return toast('Tap the band or type its chip number');
+        var other=bandByChip(u); if (other && +other.no!==no) return toast('That chip is already band '+other.no);
+        if (!b || b.uid!==u) saveBand(no,u,ME.name); closeModal(); route(); toast('Saved'); } });
 }
 
 /* =====================================================================
@@ -1028,11 +1093,11 @@ var Scanner=(function(){
   function count(w,method){
     var now=NOW().getTime(), today=TODAY(), pd=pdFor(today,w.id), win=S().repeatMin*60000;
     var status = pd && pd.last && now-pd.last<win ? 'DUP' : 'OK';
-    Store.add('scans',{t:now,date:today,team:team,block:block,workerId:w.id,no:w.no,uid:w.uid||'',method:method,status:status,device:ME.email});
+    Store.add('scans',{t:now,date:today,team:team,block:block,workerId:w.id,no:w.no,uid:(bandFor(w.no)||{}).uid||'',method:method,status:status,device:ME.email});
     if (status==='OK'){
       var shown=bagsOf(pd)+1, hh=new Date(now).getHours(), incs={bags:1}, sets={last:now};
       incs['h.'+hh]=1; if (method==='MANUAL') incs.manual=1;
-      if (!pd){ sets.first=now; sets.date=today; sets.workerId=w.id; sets.team=w.team; sets.block=block||''; }
+      if (!pd){ sets.first=now; sets.date=today; sets.workerId=w.id; sets.team=w.team; sets.block=block||''; sets.no=w.no; }
       var mpd = pd || {id:today+'|'+w.id,date:today,workerId:w.id,team:w.team,block:block||'',bags:0,manual:0,first:now,h:{}};
       mpd.bags=(mpd.bags||0)+1; mpd.last=now; if (method==='MANUAL') mpd.manual=(mpd.manual||0)+1; mpd.h=mpd.h||{}; mpd.h[hh]=(mpd.h[hh]||0)+1;
       Store.local('pickerDays', mpd);
@@ -1048,12 +1113,16 @@ var Scanner=(function(){
     var u=normUid(serial); if (!u) return; var now=Date.now();
     if (u===lastRead.uid && now-lastRead.t<3000) return; lastRead={uid:u,t:now};
     if ($('ovLink').classList.contains('on')) return;
-    var w=Store.where('workers',function(x){ return x.active && x.uid===u; })[0];
-    if (w) return count(w,'NFC');
+    if ($('ovBands').classList.contains('on')) return linkSeq(u);
+    var b=bandByChip(u);
+    if (b){ var w=wearer(b.no); if (w) return count(w,'NFC');
+      Store.add('scans',{t:NOW().getTime(),date:TODAY(),team:team,block:block||'',no:b.no,uid:u,method:'NFC',status:'UNASSIGNED',device:ME.email});
+      Store.bump('dayFlags',TODAY(),{unassigned:1},{date:TODAY()});
+      fb('bad'); return show('#b45309','BAND '+b.no,'Not given to anyone','', 'Give band '+b.no+' to a worker in Settings, or use Type number.', 5000); }
     Store.add('scans',{t:NOW().getTime(),date:TODAY(),team:team,block:block||'',uid:u,method:'NFC',status:'UNKNOWN',device:ME.email});
     Store.bump('dayFlags',TODAY(),{unknown:1},{date:TODAY()});
-    fb('bad'); show('#1d4ed8','UNKNOWN BAND','Not linked','', 'Band '+u, 0); linkUid=u;
-    $('lUid').textContent='Band '+u; $('lNo').value=''; $('lMsg').textContent=''; $('lReplace').classList.add('hide'); open('ovLink');
+    fb('bad'); show('#1d4ed8','NEW BAND','Chip not linked yet','', u, 0); linkUid=u;
+    $('lUid').textContent='Chip '+u; $('lNo').value=''; $('lMsg').textContent=''; $('lReplace').classList.add('hide'); open('ovLink');
   }
   var reader=null;
   function start(){
@@ -1091,13 +1160,28 @@ var Scanner=(function(){
     kp=''; $('kpd').textContent=''; };
   // link band
   $('lCancel').onclick=function(){ close('ovLink'); idle(); };
-  function link(replace){ var no=$('lNo').value.trim(), w=Store.where('workers',function(x){return x.active && String(x.no)===no;})[0];
-    if (!w){ $('lMsg').textContent='Number '+(no||'?')+' is not on the list. Fanus adds new workers in Settings.'; return; }
-    if (w.uid && !replace){ $('lMsg').textContent=wName(w)+' #'+no+' already has a band. Is this a replacement for a lost or broken band?'; $('lReplace').classList.remove('hide'); return; }
-    var taken=Store.where('workers',function(x){ return x.uid===linkUid && x.id!==w.id; })[0];
-    if (taken){ $('lMsg').textContent='This band is already linked to '+wName(taken)+' #'+taken.no+'.'; return; }
-    var olds=(w.oldUids||[]).concat(w.uid?[w.uid]:[]); Store.update('workers',w.id,{uid:linkUid, oldUids:olds}); Store.log(ME.email,(replace?'Replaced band for ':'Linked band to ')+wName(w)+' #'+no+': '+linkUid);
-    close('ovLink'); fb('ok'); show('#15803d', replace?'BAND REPLACED':'BAND LINKED', wName(w)+'  #'+no, '', 'Tap again to count a bag.', 3000); }
+  function link(replace){ var no=parseInt($('lNo').value,10);
+    if (!no){ $('lMsg').textContent='Type the number written on the band.'; return; }
+    var other=bandByChip(linkUid); if (other && +other.no!==no){ $('lMsg').textContent='This chip is already band '+other.no+'.'; return; }
+    var b=bandFor(no);
+    if (b && b.uid && b.uid!==linkUid && !replace){ $('lMsg').textContent='Band '+no+' already has a chip. Is this a new band replacing a lost or broken band '+no+'?'; $('lReplace').classList.remove('hide'); return; }
+    saveBand(no, linkUid, ME.email); var w=wearer(no);
+    close('ovLink'); fb('ok'); show('#15803d', replace?'BAND '+no+' REPLACED':'BAND '+no+' LINKED', w?wName(w)+'  #'+no:'Not given to anyone yet', '', w?'Tap again to count a bag.':'Give it to a worker in Settings.', 3500); }
+  // link many bands in number order, no typing
+  var seq=1, linkOnly=false;
+  function seqShow(msg,color){ $('bnNo').textContent=seq; var b=bandFor(seq), w=wearer(seq);
+    $('bnStat').textContent=(b&&b.uid?'Already linked: tap to replace it, or Skip.':'Not linked yet.')+(w?' Worn by '+wName(w)+'.':'');
+    $('bnMsg').textContent=msg||''; $('bnMsg').style.color=color||'#4ade80'; }
+  function linkSeq(u){ var other=bandByChip(u);
+    if (other && +other.no===seq){ fb('dup'); seq++; return seqShow('Band '+(seq-1)+' was already linked. Next: band '+seq+'.','#fbbf24'); }
+    if (other){ fb('bad'); return seqShow('That band is already number '+other.no+'. Tap band '+seq+'.','#f87171'); }
+    saveBand(seq,u,ME.email); fb('ok'); seq++; seqShow('✓ Band '+(seq-1)+' linked. Next: band '+seq+'.'); }
+  function openBands(){ seq=1; while (hasChip(seq) && seq<maxBand()) seq++; seqShow(''); open('ovBands'); start(); }
+  $('bnBack').onclick=function(){ seq=Math.max(1,seq-1); seqShow(''); };
+  $('bnSkip').onclick=function(){ seq++; seqShow(''); };
+  $('bnGo').onclick=function(){ var n=parseInt($('bnStart').value,10); if (n>0){ seq=n; $('bnStart').value=''; seqShow(''); } };
+  $('bnDone').onclick=function(){ close('ovBands'); if (linkOnly){ linkOnly=false; Scanner.close(); route(); } else idle(); };
+  $('smBands').onclick=function(){ close('ovSMenu'); openBands(); };
   $('lOk').onclick=function(){ link(false); }; $('lReplace').onclick=function(){ link(true); };
   // today
   $('scToday').onclick=function(){ var pds=Store.where('pickerDays',function(p){return p.date===TODAY() && p.team===team && bagsOf(p)>0;}).sort(function(a,b){return bagsOf(b)-bagsOf(a);});
@@ -1112,10 +1196,11 @@ var Scanner=(function(){
   $('smOut').onclick=function(){ close('ovSMenu'); if (ME.role==='scanner') signOut(); else { Scanner.close(); route(); } };
   $('scStart').onclick=start;
   if (TEST) $('scDemo').classList.remove('hide');
+  if (TEST) window.__tap=onBand;
   $('scDemo').onclick=function(){ if (!scanning){ scanning=true; $('scStart').style.display='none'; }
-    var ws=Store.where('workers',function(x){return x.active && x.role==='picker' && x.team===team && x.uid;});
+    var ws=Store.where('workers',function(x){return x.active && x.role==='picker' && x.team===team && hasChip(x.no);});
     if (Math.random()<0.03) return onBand('04:00:DE:AD:'+pad(Math.floor(Math.random()*90))+':00:01');
-    var w=ws[Math.floor(Math.random()*ws.length)]; if (w) onBand(w.uid); };
+    var w=ws[Math.floor(Math.random()*ws.length)]; if (w) onBand(bandFor(w.no).uid); };
   // keep the day right if the phone stays on overnight
   setInterval(function(){ if (!$('scan').classList.contains('on')) return; if (dayOpen && dayOpen!==TODAY()){ dayOpen=TODAY(); Store.start(ME.role==='scanner'?'scanner':ME.role); block=null; whenReady(function(){ head(); askBlock(); }); } battery(); }, 60000);
   var dayOpen=null;
@@ -1133,7 +1218,8 @@ var Scanner=(function(){
       var td=Store.get('teamDays',TODAY()+'|'+team); if (td){ block=td.block; head(); idle(); } else { idle(); askBlock(); }
       // once NFC has been allowed on this phone, start reading straight away (otherwise Android grabs the tap)
       if (navigator.permissions && 'NDEFReader' in window) navigator.permissions.query({name:'nfc'}).then(function(p){ if (p.state==='granted') start(); }).catch(function(){}); },
-    close:function(){ ['scan','ovDay','ovKey','ovLink','ovSToday','ovSMenu'].forEach(close); scanning=false; }
+    openLink:function(){ team=VIEW.scanTeam||'T1'; linkOnly=true; $('smOut').textContent='Back to the office screens'; $('scan').classList.add('on'); head(); idle(); openBands(); },
+    close:function(){ ['scan','ovDay','ovKey','ovLink','ovBands','ovSToday','ovSMenu'].forEach(close); scanning=false; }
   };
 })();
 
