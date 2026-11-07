@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <rect width="512" height="512" fill="#1f3d2b"/>
+  <!-- pear: narrow neck, round base, centred inside the maskable safe zone -->
+  <path d="M256 150
+           C 228 150 214 172 214 200
+           C 214 228 200 246 180 270
+           C 160 294 148 318 148 346
+           C 148 398 196 430 256 430
+           C 316 430 364 398 364 346
+           C 364 318 352 294 332 270
+           C 312 246 298 228 298 200
+           C 298 172 284 150 256 150 Z" fill="#e8d36a"/>
+  <path d="M256 152 C 254 130 258 112 268 96" stroke="#e8d36a" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <path d="M270 112 C 292 92 324 90 344 102 C 326 122 296 128 270 112 Z" fill="#7fb38f"/>
+</svg>
