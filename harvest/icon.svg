@@ -1,15 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
-  <rect width="512" height="512" fill="#1f3d2b"/>
-  <!-- pear: narrow neck, round base, centred inside the maskable safe zone -->
-  <path d="M256 150
-           C 228 150 214 172 214 200
-           C 214 228 200 246 180 270
-           C 160 294 148 318 148 346
-           C 148 398 196 430 256 430
-           C 316 430 364 398 364 346
-           C 364 318 352 294 332 270
-           C 312 246 298 228 298 200
-           C 298 172 284 150 256 150 Z" fill="#e8d36a"/>
-  <path d="M256 152 C 254 130 258 112 268 96" stroke="#e8d36a" stroke-width="12" stroke-linecap="round" fill="none"/>
-  <path d="M270 112 C 292 92 324 90 344 102 C 326 122 296 128 270 112 Z" fill="#7fb38f"/>
+  <rect width="512" height="512" fill="#ffffff"/>
+  <!-- pear -->
+  <path d="M236 168
+           C 210 168 196 190 196 216
+           C 196 244 182 262 162 286
+           C 142 310 130 332 130 360
+           C 130 410 176 440 236 440
+           C 296 440 342 410 342 360
+           C 342 332 330 310 310 286
+           C 290 262 276 244 276 216
+           C 276 190 262 168 236 168 Z" fill="#111"/>
+  <!-- highlight -->
+  <path d="M182 352 C 182 322 196 304 212 290" stroke="#fff" stroke-width="12" stroke-linecap="round" fill="none"/>
+  <!-- stem + leaf -->
+  <path d="M236 170 C 234 146 238 128 248 112" stroke="#111" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M252 126 C 274 100 312 96 336 110 C 314 134 278 142 252 126 Z" fill="#111"/>
+  <!-- contactless tap arcs -->
+  <path d="M352 236 C 366 252 366 276 352 292" stroke="#111" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M378 214 C 404 242 404 286 378 314" stroke="#111" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M404 192 C 442 232 442 296 404 336" stroke="#111" stroke-width="14" stroke-linecap="round" fill="none"/>
 </svg>
