@@ -26,6 +26,8 @@ a{color:var(--green)}
 .num{font-variant-numeric:tabular-nums}
 .mute{color:var(--mute)} .small{font-size:13px} .tiny{font-size:12px}
 .hide{display:none!important}
+.show-m{display:none}
+@media (max-width:640px){.show-m{display:inline}}
 
 /* top bar */
 .top{position:sticky;top:0;z-index:20;background:var(--green-d);color:#fff;padding:10px 16px calc(0px);}
@@ -52,11 +54,11 @@ main{max-width:1180px;margin:0 auto;padding:16px 16px 80px}
 .g4{grid-template-columns:repeat(auto-fit,minmax(160px,1fr))}
 
 .kpi .lbl{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--mute);font-weight:650}
-.kpi .val{font-size:34px;font-weight:780;line-height:1.1;margin-top:4px}
+.kpi .val{font-size:clamp(24px,2.6vw,34px);overflow-wrap:anywhere;font-weight:780;line-height:1.1;margin-top:4px}
 .kpi .sub{font-size:13px;color:var(--mute);margin-top:2px}
 .hero{background:var(--green-d);color:#fff;border:0}
 .hero .lbl,.hero .sub{color:rgba(255,255,255,.75)}
-.hero .val{font-size:44px}
+.hero .val{font-size:clamp(28px,3.2vw,44px)}
 
 .team-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
 .team-head h3{margin:0}
@@ -86,7 +88,7 @@ tbody tr:hover{background:#faf9f5}
 .seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font-weight:620;font-size:13px;cursor:pointer;color:var(--mute)}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
 input[type=text],input[type=number],input[type=date],input[type=time],input[type=search],select,textarea{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;width:100%}
-input.cell{width:84px;padding:6px 8px;text-align:right}
+input.cell{width:84px;max-width:22vw;padding:6px 8px;text-align:right}
 label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10px 0 4px}
 .fr{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 12px}
 .bandgrid{display:flex;flex-wrap:wrap;gap:6px}
@@ -160,13 +162,16 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
 .kpd{font-size:48px;font-weight:800;text-align:center;min-height:60px;margin:6px 0}
 .smsg{margin-top:12px;min-height:24px;font-size:19px;text-align:center}
 .sov table td,.sov table th{border-color:#334155;color:#f8fafc;background:none}
+.sov tbody tr:hover,.sov tr:hover{background:none}
 
 @media (max-width:640px){
   main{padding:12px 12px 80px}
   .card{padding:14px}
   .tw{margin:0 -14px;padding:0 14px}
-  .kpi .val{font-size:28px} .hero .val{font-size:38px}
+  .kpi .val{font-size:26px} .hero .val{font-size:30px}
   .hide-m{display:none}
+  th,td{padding:7px 5px}
+  input.cell{max-width:17vw}
 }
 @media print{.top,.no-print{display:none!important}main{padding:0}.card{box-shadow:none}}
 </style>
@@ -285,7 +290,7 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
    ===================================================================== */
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js';
 import { getAuth, connectAuthEmulator, onAuthStateChanged, signInWithEmailAndPassword, signOut as fbSignOut, sendPasswordResetEmail } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, query, where, orderBy, limit, increment, writeBatch } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, connectFirestoreEmulator, collection, doc, onSnapshot, setDoc, deleteDoc, getDoc, getDocFromServer, query, where, orderBy, limit, increment, writeBatch, waitForPendingWrites, arrayUnion } from 'https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js';
 (function(){
 'use strict';
 // Firebase project (Kettel). Not a secret: the access rules protect the data.
@@ -293,7 +298,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.2.2';
+var APP_VERSION = '1.3';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -320,6 +325,7 @@ function minToHm(m){ m=Math.round(m); return pad(Math.floor(m/60))+':'+pad(m%60)
 var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 function nice(s){ var d=parseYmd(s); return DOW[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()]; }
 function niceShort(s){ var d=parseYmd(s); return d.getDate()+' '+MON[d.getMonth()]; }
+function Rk(n){ return Math.round(n*100)%100 ? R(n) : 'R'+fmt(n); }   // headline money: drop ,00
 function R(n){ return 'R'+(Math.round(n*100)/100).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2}); }
 function fmt(n,dp){ dp=dp||0; return (Math.round(n*Math.pow(10,dp))/Math.pow(10,dp)).toLocaleString('en-ZA',{minimumFractionDigits:dp,maximumFractionDigits:dp}); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
@@ -333,7 +339,7 @@ function TODAY(){ return ymd(NOW()); }
    STORE (prototype version: localStorage)
    ===================================================================== */
 var Store = (function(){
-  var fb=null, db=null, mem={}, ready={}, subs=[], listeners=[], pending=0, failed=0, lastErr='';
+  var queued=false, fb=null, db=null, mem={}, ready={}, subs=[], listeners=[], pending=0, failed=0, lastErr='';
   var COLS=['settings','workers','bands','blocks','bloom','teamDays','pickerDays','bins','loans','attendance','paidWeeks','audit','users','dayFlags'];
   COLS.forEach(function(c){ mem[c]={}; });
   function clean(o){ var x={}; for (var k in o) if (k!=='id' && o[k]!==undefined) x[k]=o[k]; return x; }
@@ -392,7 +398,7 @@ var Store = (function(){
     where:function(col,fn){ return this.all(col).filter(fn); },
     put:function(col,obj){ mem[col][obj.id]=obj; track(setDoc(doc(db,col,obj.id), clean(obj)), col); notify(col); return obj; },
     // merge some fields (no counters)
-    update:function(col,id,fields){ var o=mem[col][id]; if (o) for (var k in fields) o[k]=fields[k]; track(setDoc(doc(db,col,id), fields, {merge:true}), col); notify(col); },
+    update:function(col,id,fields){ var o=mem[col][id]; if (o) for (var k in fields) if (k!=='oldUids') o[k]=fields[k]; track(setDoc(doc(db,col,id), fields, {merge:true}), col); notify(col); },
     // add to counters safely, even when two devices count at the same time
     bump:function(col,id,incs,sets){ var f={}, k; for (k in (sets||{})) f[k]=sets[k];
       for (k in incs){ var parts=k.split('.'); if (parts.length===2){ f[parts[0]]=f[parts[0]]||{}; f[parts[0]][parts[1]]=increment(incs[k]); } else f[k]=increment(incs[k]); }
@@ -403,7 +409,10 @@ var Store = (function(){
       mem.audit[id]=Object.assign({id:id},e); track(setDoc(doc(db,'audit',id), e), 'change log'); },
     local:function(col,obj){ mem[col][obj.id]=obj; notify(col); },
     onChange:function(f){ listeners.push(f); },
-    sync:function(){ return {pending:pending, failed:failed, err:lastErr}; }
+    sync:function(){ return {pending:pending+(queued?1:0), failed:failed, err:lastErr}; },
+    // Firestore keeps unsent writes across reloads; ask it whether everything has reached the server
+    checkQueue:function(){ if (!db) return; queued=true; notify('_sync'); waitForPendingWrites(db).then(function(){ queued=false; notify('_sync'); }).catch(function(){}); },
+    arrayAdd:function(v){ return arrayUnion(v); }
   };
 })();
 
@@ -413,6 +422,7 @@ var Store = (function(){
 function S(){ return Store.settings(); }
 function teamName(id){ var t=S().teams.filter(function(x){return x.id===id;})[0]; return t?t.name:id; }
 function worker(id){ return Store.get('workers',id); }
+function workerOr(id){ return worker(id) || {id:id,no:'?',first:'(removed worker)',last:'',team:''}; }
 function wName(w){ return w ? (w.first+' '+w.last).trim() : '?'; }
 function blockById(id){ return Store.get('blocks',id); }
 // Bands are numbered (number written on the band) and keep their number all season.
@@ -430,9 +440,9 @@ function whoName(w){ if (!w || String(w).indexOf('@')<0) return w||''; var u=Sto
 function pct(a,t){ return t ? Math.round(a/t*100) : 0; }
 function splitBar(e,j){ var t=e+j; return t ? '<div class="split"><i style="width:'+pct(e,t)+'%"></i></div>' : ''; }
 function lastPicked(wid){ var d=''; Store.where('pickerDays',function(p){return p.workerId===wid && bagsOf(p)>0;}).forEach(function(p){ if (p.date>d) d=p.date; }); return d; }
-function saveBand(no, chip, who){ var b=bandFor(no), olds=(b&&b.oldUids)||[];
-  if (b && b.uid && b.uid!==chip) olds=olds.concat([b.uid]);
-  Store.put('bands',{id:String(no),no:+no,uid:chip,oldUids:olds,at:Date.now(),by:who});
+function saveBand(no, chip, who){ var b=bandFor(no), f={no:+no,uid:chip,at:Date.now(),by:who};
+  if (b && b.uid && b.uid!==chip) f.oldUids=Store.arrayAdd(b.uid);
+  Store.update('bands',String(no),f);
   Store.log(who,(b&&b.uid&&b.uid!==chip?'Replaced chip for band ':'Linked chip to band ')+no+': '+chip); }
 
 // picking minutes between two clock minutes, counting only the picking sessions
@@ -539,16 +549,33 @@ function onUser(user){
     hideGate();
     Store.start(ME.role==='scanner'?'scanner':ME.role);
     whenReady(function(){
-      if (!S() && ME.role!=='scanner') Store.setSettings(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), ME.name, 'Created default settings');
-      if (ME.role!=='scanner' && !Store.all('bands').length) Store.where('workers',function(w){ return w.uid; }).forEach(function(w){ saveBand(w.no, w.uid, ME.name); });
-      if (!S()) { gateMsg('The farm settings are not set up yet. Ask Wian to sign in on a computer first.<br><br><a href="#" id="gOut" style="color:#fff">Sign out</a>'); bindOut(); showGate(); return; }
-      if (ME.role==='scanner') Scanner.open(); else { $('userBtn').textContent=ME.name+' ▾'; route(); }
+      Store.checkQueue();
+      if (S()) return go2();
+      if (ME.role!=='scanner' && navigator.onLine){
+        getDocFromServer(doc(Store.db(),'settings','main')).then(function(d){
+          if (!d.exists() && !S()) Store.setSettings(JSON.parse(JSON.stringify(DEFAULT_SETTINGS)), ME.name, 'Created default settings');
+          go2(); }).catch(function(){ go2(); });
+        return;
+      }
+      go2();
     });
+    function go2(){
+      if (!S()){   // still loading (slow signal): keep trying rather than guessing
+        gateMsg('Loading the farm settings… This needs signal the first time on a device.<br><br><a href="#" id="gOut" style="color:#fff">Sign out</a>'); bindOut(); showGate();
+        var tries=0, t=setInterval(function(){ if (S() || ++tries>300){ clearInterval(t); if (S()){ hideGate(); go2(); } } }, 1000);
+        return;
+      }
+      if (ME.role!=='scanner' && !Store.all('bands').length && Store.isReady()) Store.where('workers',function(w){ return w.uid; }).forEach(function(w){ saveBand(w.no, w.uid, ME.name); });
+      if (ME.role==='scanner') Scanner.open(); else { $('userBtn').textContent=ME.name+' ▾'; route(); }
+    }
   }, function(e){ gateMsg('Could not read your account ('+esc(e.code||e)+'). Check signal and try again.<br><br><a href="#" id="gOut" style="color:#fff">Sign out</a>'); bindOut(); showGate(); });
 }
 function whenReady(fn){ var n=0; (function wait(){ if (Store.isReady() || n++>(navigator.onLine?80:20)) return fn(); setTimeout(wait,100); })(); }
 function bindOut(){ var a=$('gOut'); if (a) a.onclick=function(e){ e.preventDefault(); signOut(); }; }
 function signOut(){ fbSignOut(AUTH); }
+// a phone must not sign out while bags are still waiting to send: they would stay stuck on the phone
+function safeSignOut(){ if (!Store.sync().pending) return signOut();
+  if (window.confirm('Some bags are still saved only on this phone and have not been sent. Signing out now would leave them stuck on this phone. Go somewhere with signal first.\n\nSign out anyway?')) signOut(); }
 $('login').onsubmit=function(e){ e.preventDefault(); $('lgMsg').textContent='Signing in…'; $('lgGo').disabled=true;
   signInWithEmailAndPassword(AUTH, $('lgEmail').value.trim(), $('lgPw').value).then(function(){ $('lgMsg').textContent=''; $('lgPw').value=''; })
   .catch(function(err){ $('lgMsg').textContent = /invalid|wrong|not-found|credential/.test(err.code||'') ? 'Email or password is wrong.' : err.code==='auth/network-request-failed' ? 'No signal. The first sign-in on a device needs signal.' : 'Could not sign in ('+err.code+').'; })
@@ -610,7 +637,7 @@ function rerender(){
 /* ---------------- chart helpers ---------------- */
 function lineChart(series, opts){
   // series: [{name,color,pts:[[x,y]...], dash}]
-  var W=640,H=240,L=40,Rr=12,T=10,B=28;
+  var NARROW=window.innerWidth<640, W=NARROW?380:640,H=NARROW?260:240,L=40,Rr=12,T=10,B=28;
   var xs=[],ys=[0]; series.forEach(function(s){ s.pts.forEach(function(p){ xs.push(p[0]); ys.push(p[1]); }); });
   if (!xs.length) return '<div class="empty">No data yet.</div>';
   var xmin=Math.min.apply(null,xs), xmax=Math.max.apply(null,xs); if (xmax===xmin) xmax=xmin+1;
@@ -628,7 +655,7 @@ function lineChart(series, opts){
 }
 function barChart(bars, opts){
   // bars: [{label, v, color, faded}]
-  var W=640,H=200,L=34,T=10,B=26, max=Math.max.apply(null,bars.map(function(b){return b.v;}).concat([1]))*1.1;
+  var W=window.innerWidth<640?400:640,H=200,L=34,T=10,B=26, max=Math.max.apply(null,bars.map(function(b){return b.v;}).concat([1]))*1.1;
   var bw=(W-L-8)/bars.length;
   var g='<svg viewBox="0 0 '+W+' '+H+'">';
   [0,0.5,1].forEach(function(f){ var y=T+(1-f)*(H-T-B); g+='<line x1="'+L+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="#e3e0d8"/><text x="'+(L-6)+'" y="'+(y+4)+'" font-size="13" fill="#6b736d" text-anchor="end">'+fmt(max*f)+'</text>'; });
@@ -694,7 +721,7 @@ VIEWS.today=function(el){
   // rankings
   var pds=Store.where('pickerDays',function(p){return p.date===date && bagsOf(p)>0;}).sort(function(a,b){return bagsOf(b)-bagsOf(a);});
   var max=pds.length?bagsOf(pds[0]):1;
-  function rows(list,startRank){ return list.map(function(p,i){ var w=worker(p.workerId);
+  function rows(list,startRank){ return list.map(function(p,i){ var w=workerOr(p.workerId);
     return '<div class="list-row click" data-w="'+p.workerId+'"><span class="rank">'+(startRank+i)+'</span><div style="min-width:120px;flex:1.2"><b>'+esc(wName(w))+'</b> <span class="mute small">#'+w.no+' · '+esc(teamName(p.team))+'</span></div><div class="barw hide-m"><i style="width:'+(bagsOf(p)/max*100)+'%"></i></div><b class="num" style="width:44px;text-align:right">'+bagsOf(p)+'</b></div>'; }).join(''); }
   h+='<div class="grid g2">';
   h+='<div class="card"><h3>Top 5 pickers</h3>'+(pds.length?rows(pds.slice(0,5),1):'<div class="empty">No bags yet.</div>')+'</div>';
@@ -707,8 +734,11 @@ VIEWS.today=function(el){
   }
   // needs attention
   var attn=[];
+  Store.where('pickerDays',function(p){ return p.date===date && bagsOf(p)>0; }).forEach(function(p){ var w=worker(p.workerId);
+    if (w && !w.active && (!w.leftAt || p.date>=w.leftAt)) attn.push('<b>'+esc(wName(w))+'</b> has left but got '+bagsOf(p)+' bags today on band '+(p.no||w.no)+'. A phone may have used an old list: check who wore band '+(p.no||w.no)+' and move the bags with Correct a count.'); });
+  var seenNo={}; Store.where('workers',function(w){return w.active;}).forEach(function(w){ if (seenNo[w.no]) attn.push('Band '+w.no+' is given to two people: <b>'+esc(seenNo[w.no])+'</b> and <b>'+esc(wName(w))+'</b>. Fix one of them in Settings.'); seenNo[w.no]=wName(w); });
   if (!Store.all('workers').length) attn.push('No workers yet. Add them in <a href="#settings">Settings</a>.');
-  pds.forEach(function(p){ if (p.manual>=3) attn.push('<b>'+esc(wName(worker(p.workerId)))+'</b> #'+worker(p.workerId).no+': '+p.manual+' bags typed by hand. Band may be faulty.'); });
+  pds.forEach(function(p){ if (p.manual>=3) attn.push('<b>'+esc(wName(workerOr(p.workerId)))+'</b> #'+workerOr(p.workerId).no+': '+p.manual+' bags typed by hand. Band may be faulty.'); });
   var unk=(Store.get('dayFlags',date)||{}).unknown||0;
   if (unk) attn.push(unk+' taps from bands whose chip is not linked to a band number.');
   var una=(Store.get('dayFlags',date)||{}).unassigned||0;
@@ -756,7 +786,7 @@ function pickerModal(wid){
   var h='<h2>'+esc(wName(w))+' <span class="mute">#'+w.no+'</span></h2><div class="small mute" style="margin:4px 0 12px">'+esc(teamName(w.team))+' · '+(w.pay==='day'?'Day worker, paid per bag':'Contract worker, performance only')+' · band '+w.no+(hasChip(w.no)?'':' (no chip linked yet)')+(w.active?'':' · has left')+'</div>'+
     '<div class="stats" style="margin-bottom:12px"><div class="stat"><b>'+fmt(tot)+'</b><span>bags this season</span></div><div class="stat"><b>'+pds.length+'</b><span>days picked</span></div><div class="stat"><b>'+(pds.length?fmt(tot/pds.length):0)+'</b><span>average a day</span></div></div>'+
     '<table><thead><tr><th>Day</th><th>Block</th><th class="r">Scanned</th><th class="r">Correction</th><th class="r">Bags</th></tr></thead><tbody>'+
-    pds.map(function(p){ var b=blockById(p.block); return '<tr><td>'+nice(p.date)+'</td><td>'+(b?esc(b.name):'')+'</td><td class="r num">'+p.bags+(p.manual?' <span class="tiny mute">('+p.manual+' typed)</span>':'')+'</td><td class="r num">'+(p.adj?(p.adj>0?'+':'')+p.adj+(p.adjWhy?' <span class="tiny mute" title="'+esc(p.adjWhy)+'">ⓘ</span>':''):'')+'</td><td class="r num"><b>'+bagsOf(p)+'</b></td></tr>'; }).join('')+
+    pds.map(function(p){ var b=blockById(p.block); return '<tr><td>'+nice(p.date)+'</td><td>'+(b?esc(b.name):'')+'</td><td class="r num">'+(p.bags||0)+(p.manual?' <span class="tiny mute">('+p.manual+' typed)</span>':'')+'</td><td class="r num">'+(p.adj?(p.adj>0?'+':'')+p.adj+(p.adjWhy?' <span class="tiny mute" title="'+esc(p.adjWhy)+'">ⓘ</span>':''):'')+'</td><td class="r num"><b>'+bagsOf(p)+'</b></td></tr>'; }).join('')+
     '</tbody></table>'+
     '<div class="card" style="margin-top:14px;background:var(--soft);box-shadow:none"><h3>Correct a count or add bags from paper</h3><div class="fr">'+
     '<div><label class="f">Day</label><input type="date" id="cDate" value="'+today+'"></div><div><label class="f">Bags to add (use minus to remove)</label><input type="number" id="cN" placeholder="e.g. 12 or -2"></div></div>'+
@@ -773,7 +803,10 @@ function pickerModal(wid){
     var ws=weekStart(d); if (Store.get('paidWeeks',ws)) return toast('That week is marked as paid. Unlock it on the Pay screen first.');
     var sets={adjWhy:((pd&&pd.adjWhy?pd.adjWhy+'; ':'')+why)};
     if (!pd){ sets.date=d; sets.workerId=wid; sets.team=w.team; sets.block=td?td.block:''; }
-    Store.bump('pickerDays', d+'|'+wid, {adj:n}, sets); Store.log(ME.name,'Corrected '+wName(w)+' #'+w.no+' on '+d+' by '+(n>0?'+':'')+n+' bags: '+why);
+    Store.bump('pickerDays', d+'|'+wid, {adj:n}, sets);
+    var loc=JSON.parse(JSON.stringify(pd||{id:d+'|'+wid,date:d,workerId:wid,team:w.team,block:sets.block||'',bags:0}));
+    loc.adj=(loc.adj||0)+n; loc.adjWhy=sets.adjWhy; Store.local('pickerDays',loc);
+    Store.log(ME.name,'Corrected '+wName(w)+' #'+w.no+' on '+d+' by '+(n>0?'+':'')+n+' bags: '+why);
     toast('Saved'); pickerModal(wid);
   }});
 }
@@ -803,10 +836,10 @@ VIEWS.bins=function(el){
   var byDate={}; Store.all('bins').forEach(function(b){ var d=byDate[b.date]||(byDate[b.date]={date:b.date,exp:0,juice:0,v:{}}); d.exp+=b.export; d.juice+=b.juice; d.v[b.variety]=1; });
   var days=Object.keys(byDate).sort().reverse();
   var se=0,sj=0; days.forEach(function(d){ se+=byDate[d].exp; sj+=byDate[d].juice; });
-  h+='<div class="card"><h3>This season</h3><div class="small mute" style="margin-bottom:6px">'+fmt(se+sj)+' bins: '+fmt(se)+' export ('+(se+sj?Math.round(se/(se+sj)*100):0)+'%) and '+fmt(sj)+' juice.</div><div class="tw"><table><thead><tr><th>Day</th><th>Variety</th><th class="r">Export</th><th class="r">Juice</th><th class="r">Total</th><th class="r">Export %</th><th class="r hide-m">From bags</th></tr></thead><tbody>'+
+  h+='<div class="card"><h3>This season</h3><div class="small mute" style="margin-bottom:6px">'+fmt(se+sj)+' bins: '+fmt(se)+' export ('+(se+sj?Math.round(se/(se+sj)*100):0)+'%) and '+fmt(sj)+' juice.</div><div class="tw"><table><thead><tr><th>Day</th><th class="hide-m">Variety</th><th class="r">Export</th><th class="r">Juice</th><th class="r">Total</th><th class="r">Export %</th><th class="r hide-m">From bags</th></tr></thead><tbody>'+
     days.map(function(d){ var x=byDate[d], fb=st.teams.reduce(function(a,t){return a+teamEstimate(d,t.id).binsSoFar;},0);
-      return '<tr class="click" data-d="'+d+'"><td>'+nice(d)+'</td><td>'+Object.keys(x.v).map(vShort).join(', ')+'</td><td class="r num">'+x.exp+'</td><td class="r num">'+x.juice+'</td><td class="r num"><b>'+(x.exp+x.juice)+'</b></td><td class="r num">'+pct(x.exp,x.exp+x.juice)+'%</td><td class="r num mute hide-m">'+(fb?fmt(fb,1):'')+'</td></tr>'; }).join('')+
-    '<tr class="tot"><td>Season</td><td></td><td class="r num">'+se+'</td><td class="r num">'+sj+'</td><td class="r num">'+(se+sj)+'</td><td class="r num">'+pct(se,se+sj)+'%</td><td class="hide-m"></td></tr></tbody></table></div></div>';
+      return '<tr class="click" data-d="'+d+'"><td>'+nice(d)+'</td><td class="hide-m">'+Object.keys(x.v).map(vShort).join(', ')+'</td><td class="r num">'+x.exp+'</td><td class="r num">'+x.juice+'</td><td class="r num"><b>'+(x.exp+x.juice)+'</b></td><td class="r num">'+pct(x.exp,x.exp+x.juice)+'%</td><td class="r num mute hide-m">'+(fb?fmt(fb,1):'')+'</td></tr>'; }).join('')+
+    '<tr class="tot"><td>Season</td><td class="hide-m"></td><td class="r num">'+se+'</td><td class="r num">'+sj+'</td><td class="r num">'+(se+sj)+'</td><td class="r num">'+pct(se,se+sj)+'%</td><td class="hide-m"></td></tr></tbody></table></div></div>';
   el.innerHTML=h;
   $('bDate').onchange=function(){ VIEW.binDate=this.value||null; VIEW.binExtra=null; route(); };
   if ($('bAdd')) $('bAdd').onchange=function(){ VIEW.binExtra=this.value; route(); };
@@ -826,27 +859,30 @@ VIEWS.pay=function(el){
   var pickers=Store.where('workers',function(w){return w.role==='picker' && w.pay==='day';}).sort(function(a,b){return a.no-b.no;});
   var sorters=Store.where('workers',function(w){return w.role==='sorter';}).sort(function(a,b){return a.no-b.no;});
   var rows=pickers.map(function(w){ var d=days.map(function(x){ return bagsOf(pdFor(x,w.id)); }); var bags=d.reduce(function(a,b){return a+b;},0);
-    var loan=(Store.get('loans',ws+'|'+w.id)||{}).amount||0; return {w:w,d:d,bags:bags,gross:bags*st.ratePerBag,loan:loan,net:bags*st.ratePerBag-loan}; })
+    var loan=(Store.get('loans',ws+'|'+w.id)||{}).amount||0; var rate=paid&&paid.rate!=null?paid.rate:st.ratePerBag, owe=bags*rate-loan; return {w:w,d:d,bags:bags,gross:bags*rate,loan:loan,net:Math.max(0,owe),short:Math.max(0,-owe)}; })
     .filter(function(r){ return r.bags || r.loan || (ws===cur && r.w.active); });   // finished weeks: only people with bags or a loan
   var T={bags:0,gross:0,loan:0,net:0}; rows.forEach(function(r){ T.bags+=r.bags; T.gross+=r.gross; T.loan+=r.loan; T.net+=r.net; });
   var weeks=[]; for (var i=0;i<8;i++) weeks.push(addDays(cur,-7*i));
   var h='<div class="bar"><h2>Pay</h2><select id="payW" style="width:auto">'+weeks.map(function(w){ return '<option value="'+w+'"'+(w===ws?' selected':'')+'>'+niceShort(w)+' to '+niceShort(addDays(w,6))+(w===cur?' (this week)':'')+(Store.get('paidWeeks',w)?' · paid':'')+'</option>'; }).join('')+'</select>'+
     '<button class="btn" id="payX">Excel</button><button class="btn hide-m" onclick="window.print()">Print</button></div>';
   h+='<div class="grid g4">'+
-    '<div class="card kpi hero"><div class="lbl">Cash needed</div><div class="val num">'+R(T.net)+'</div><div class="sub">Payday '+nice(payday(ws))+'</div></div>'+
+    '<div class="card kpi hero"><div class="lbl">Cash needed</div><div class="val num" style="white-space:nowrap">'+Rk(T.net)+'</div><div class="sub">Payday '+nice(payday(ws))+'</div></div>'+
     '<div class="card kpi"><div class="lbl">Bags</div><div class="val num">'+fmt(T.bags)+'</div><div class="sub">× '+R(st.ratePerBag)+' = '+R(T.gross)+'</div></div>'+
-    '<div class="card kpi"><div class="lbl">Loans deducted</div><div class="val num">'+R(T.loan)+'</div><div class="sub">'+rows.filter(function(r){return r.loan;}).length+' pickers</div></div>'+
+    '<div class="card kpi"><div class="lbl">Loans deducted</div><div class="val num">'+Rk(T.loan)+'</div><div class="sub">'+rows.filter(function(r){return r.loan;}).length+' pickers</div></div>'+
     '<div class="card kpi"><div class="lbl">Status</div>'+
       (locked ? '<div class="val" style="font-size:22px;margin-top:8px;color:var(--green)">✓ All paid</div><div class="sub">'+esc(paid.by)+', '+(function(d){return d.getDate()+' '+MON[d.getMonth()]+' '+hm(paid.paidAt);})(new Date(paid.paidAt))+'</div>'
        : ws===cur ? '<div class="val" style="font-size:20px;margin-top:8px">Week still running</div><div class="sub">Ends '+nice(addDays(ws,6))+'. Pay on '+nice(payday(ws))+'.</div>'
        : '<div class="val" style="font-size:20px;margin-top:8px">Not paid yet</div><button class="btn p no-print" id="markPaid" style="margin-top:8px;width:100%">Mark as paid</button>')+
     '</div></div>';
+  if (locked && paid.rows){ var diffs=[]; rows.forEach(function(r){ var sn=paid.rows[r.w.id]; var was=sn?sn.bags:0; if (r.bags!==was) diffs.push(esc(wName(r.w))+' #'+r.w.no+': paid for '+was+' bags, now '+r.bags); });
+    Object.keys(paid.rows).forEach(function(id){ if (!rows.some(function(r){return r.w.id===id;}) && paid.rows[id].bags){ var w=worker(id); diffs.push(esc(w?wName(w):id)+': paid for '+paid.rows[id].bags+' bags, now 0'); } });
+    if (diffs.length) h+='<div class="note" style="background:var(--red-s);border-color:#f3c7c1;color:#7a1d14"><b>Changed after this week was paid</b> (for example a phone that sent bags late). Settle the difference next payday:<br>'+diffs.join('<br>')+'</div>'; }
   if (locked) h+='<div class="note">Paid and locked: bags, loans and sorter days for this week can no longer change. <a href="#" id="unlock">Unlock</a> only if something was paid wrongly.</div>';
-  h+='<div class="card"><h3>Day-worker pickers</h3><div class="tw"><table><thead><tr><th>#</th><th>Name</th>'+days.map(function(d){var x=parseYmd(d); return '<th class="r hide-m">'+DOW[x.getDay()]+'<br><span class="tiny">'+x.getDate()+'</span></th>';}).join('')+
-    '<th class="r">Bags</th><th class="r">Gross</th><th class="r">Loan</th><th class="r">To pay</th></tr></thead><tbody>'+
-    rows.map(function(r){ return '<tr><td class="num">'+r.w.no+'</td><td class="click" data-w="'+r.w.id+'"><b>'+esc(wName(r.w))+'</b></td>'+r.d.map(function(b){return '<td class="r num mute hide-m">'+(b||'')+'</td>';}).join('')+
-      '<td class="r num">'+r.bags+'</td><td class="r num">'+R(r.gross)+'</td><td class="r">'+(locked?R(r.loan):'<input class="cell" type="number" min="0" step="10" inputmode="numeric" data-loan="'+r.w.id+'" value="'+(r.loan||'')+'" placeholder="0">')+'</td><td class="r num"><b>'+R(r.net)+'</b></td></tr>'; }).join('')+
-    '<tr class="tot"><td></td><td>Total</td>'+days.map(function(d,i){ return '<td class="r num hide-m">'+fmt(rows.reduce(function(a,r){return a+r.d[i];},0))+'</td>'; }).join('')+'<td class="r num">'+fmt(T.bags)+'</td><td class="r num">'+R(T.gross)+'</td><td class="r num">'+R(T.loan)+'</td><td class="r num">'+R(T.net)+'</td></tr></tbody></table></div>'+
+  h+='<div class="card"><h3>Day-worker pickers</h3><div class="tw"><table><thead><tr><th class="hide-m">#</th><th>Name</th>'+days.map(function(d){var x=parseYmd(d); return '<th class="r hide-m">'+DOW[x.getDay()]+'<br><span class="tiny">'+x.getDate()+'</span></th>';}).join('')+
+    '<th class="r">Bags</th><th class="r hide-m">Gross</th><th class="r">Loan</th><th class="r">To pay</th></tr></thead><tbody>'+
+    rows.map(function(r){ return '<tr><td class="num hide-m">'+r.w.no+'</td><td class="click" data-w="'+r.w.id+'"><b>'+esc(wName(r.w))+'</b> <span class="mute small show-m">#'+r.w.no+'</span></td>'+r.d.map(function(b){return '<td class="r num mute hide-m">'+(b||'')+'</td>';}).join('')+
+      '<td class="r num">'+r.bags+'</td><td class="r num hide-m">'+R(r.gross)+'</td><td class="r">'+(locked?R(r.loan):'<input class="cell" type="number" min="0" step="10" inputmode="numeric" data-loan="'+r.w.id+'" value="'+(r.loan||'')+'" placeholder="0">')+'</td><td class="r num"><b>'+R(r.net)+'</b>'+(r.short?'<div class="tiny" style="color:var(--red)">loan R'+fmt(r.short)+' more than pay</div>':'')+'</td></tr>'; }).join('')+
+    '<tr class="tot"><td class="hide-m"></td><td>Total</td>'+days.map(function(d,i){ return '<td class="r num hide-m">'+fmt(rows.reduce(function(a,r){return a+r.d[i];},0))+'</td>'; }).join('')+'<td class="r num">'+fmt(T.bags)+'</td><td class="r num hide-m">'+R(T.gross)+'</td><td class="r num">'+R(T.loan)+'</td><td class="r num">'+R(T.net)+'</td></tr></tbody></table></div>'+
     '<div class="small mute" style="margin-top:8px">Loans: one total per picker for the week, deducted in full on payday. Rate '+R(st.ratePerBag)+' a bag (change it in Settings).</div></div>';
   // sorters attendance
   h+='<div class="card"><h3>Sorters: attendance</h3><div class="small mute" style="margin-bottom:6px">Tick the days each sorter worked. Paid per day, outside this app.</div><div class="tw"><table><thead><tr><th>#</th><th>Name</th>'+days.map(function(d){var x=parseYmd(d); return '<th style="text-align:center">'+DOW[x.getDay()]+'<br><span class="tiny">'+x.getDate()+'</span></th>';}).join('')+'<th class="r">Days</th></tr></thead><tbody>'+
@@ -868,7 +904,7 @@ VIEWS.pay=function(el){
   el.querySelectorAll('td[data-w]').forEach(function(r){ r.onclick=function(){ pickerModal(r.getAttribute('data-w')); }; });
   if ($('markPaid')) $('markPaid').onclick=function(){
     modal('<h2>Have all these pickers been paid?</h2><p><b>'+R(T.net)+'</b> in cash to '+fmt(rows.filter(function(r){return r.net>0;}).length)+' pickers for '+niceShort(ws)+' to '+niceShort(addDays(ws,6))+'.</p><p class="small mute">The week is then locked: its bags, loans and sorter days can no longer change. Download the Excel first if you want a copy.</p><div class="acts"><button class="btn" data-a="close">Not yet</button><button class="btn p" data-a="ok">Yes, all paid</button></div>',
-      { ok:function(){ Store.put('paidWeeks',{id:ws,week:ws,paidAt:Date.now(),by:ME.name,total:T.net}); Store.log(ME.name,'Marked week '+ws+' as paid: '+R(T.net)); closeModal(); route(); } }); };
+      { ok:function(){ var snap={}; rows.forEach(function(r){ snap[r.w.id]={bags:r.bags,loan:r.loan,net:r.net}; }); Store.put('paidWeeks',{id:ws,week:ws,paidAt:Date.now(),by:ME.name,total:T.net,rate:st.ratePerBag,rows:snap}); Store.log(ME.name,'Marked week '+ws+' as paid: '+R(T.net)); closeModal(); route(); } }); };
   if ($('unlock')) $('unlock').onclick=function(e){ e.preventDefault();
     modal('<h2>Unlock this paid week?</h2><p class="small">Only do this to fix a mistake. The unlock is recorded in the change log.</p><div class="acts"><button class="btn" data-a="close">Cancel</button><button class="btn w" data-a="ok">Unlock</button></div>',
       { ok:function(){ Store.del('paidWeeks',ws); Store.log(ME.name,'Unlocked paid week '+ws); closeModal(); route(); } }); };
@@ -1108,7 +1144,7 @@ var Scanner=(function(){
 
   function count(w,method){
     var now=NOW().getTime(), today=TODAY(), pd=pdFor(today,w.id), win=S().repeatMin*60000;
-    var status = pd && pd.last && now-pd.last<win ? 'DUP' : 'OK';
+    var status = pd && pd.last && now-pd.last>=0 && now-pd.last<win ? 'DUP' : 'OK';
     Store.add('scans',{t:now,date:today,team:team,block:block,workerId:w.id,no:w.no,uid:(bandFor(w.no)||{}).uid||'',method:method,status:status,device:ME.email});
     if (status==='OK'){
       var shown=bagsOf(pd)+1, hh=new Date(now).getHours(), incs={bags:1}, sets={last:now};
@@ -1127,11 +1163,14 @@ var Scanner=(function(){
   }
   function onBand(serial){
     var u=normUid(serial); if (!u) return; var now=Date.now();
+    if (!$('scan').classList.contains('on')) return;
     if (u===lastRead.uid && now-lastRead.t<3000) return; lastRead={uid:u,t:now};
-    if ($('ovLink').classList.contains('on')) return;
+    if ($('ovLink').classList.contains('on')){ fb('bad'); $('lMsg').textContent='Finish linking this band first (or Cancel), then tap again.'; return; }
     if ($('ovBands').classList.contains('on')) return linkSeq(u);
     var b=bandByChip(u);
-    if (b){ var w=wearer(b.no); if (w) return count(w,'NFC');
+    if (b){ var w=wearer(b.no);
+      if (w && w.role!=='picker'){ fb('bad'); return show('#b45309','NOT COUNTED', wName(w)+'  #'+w.no, '', 'Sorters do not get bags.', 3500); }
+      if (w) return count(w,'NFC');
       Store.add('scans',{t:NOW().getTime(),date:TODAY(),team:team,block:block||'',no:b.no,uid:u,method:'NFC',status:'UNASSIGNED',device:ME.email});
       Store.bump('dayFlags',TODAY(),{unassigned:1},{date:TODAY()});
       fb('bad'); return show('#b45309','BAND '+b.no,'Not given to anyone','', 'Give band '+b.no+' to a worker in Settings, or use Type number.', 5000); }
@@ -1140,13 +1179,14 @@ var Scanner=(function(){
     fb('bad'); show('#1d4ed8','NEW BAND','Chip not linked yet','', u, 0); linkUid=u;
     $('lUid').textContent='Chip '+u; $('lNo').value=''; $('lMsg').textContent=''; $('lReplace').classList.add('hide'); open('ovLink');
   }
-  var reader=null;
+  var reader=null, abortCtl=null;
+  function stopNfc(){ try{ if (abortCtl) abortCtl.abort(); }catch(e){} abortCtl=null; reader=null; scanning=false; }
   function start(){
     if (scanning && reader) { idle(); return; }
     if (audio===null){ try{ audio=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ audio=false; } } if (audio&&audio.resume) audio.resume();
     if ('wakeLock' in navigator) navigator.wakeLock.request('screen').then(function(l){wake=l;}).catch(function(){});
     if (!('NDEFReader' in window)){ scanning=true; $('scStart').style.display='none'; return show('', 'NO NFC ON THIS DEVICE', 'Use the demo button', '', 'On the FORT 1 a band tap counts a bag.', 0); }
-    try { var r=reader=new NDEFReader(); r.scan().then(function(){ scanning=true; $('scStart').style.display='none'; idle(); })
+    try { abortCtl=new AbortController(); var r=reader=new NDEFReader(); r.scan({signal:abortCtl.signal}).then(function(){ scanning=true; $('scStart').style.display='none'; idle(); })
       .catch(function(e){ reader=null; $('scStart').style.display=''; show('#b91c1c','NFC NOT STARTED',e.name||'Error','',(e.message||'')+' Turn on NFC and press START.',0); });
       r.onreading=function(ev){ onBand(ev.serialNumber); }; r.onreadingerror=function(){ fb('bad'); show('#b91c1c','COULD NOT READ BAND','Hold it still and try again','','',2500); };
     } catch(e){ show('#b91c1c','NFC ERROR',e.name||'','',e.message||'',0); }
@@ -1161,7 +1201,7 @@ var Scanner=(function(){
   }
   function askBlock(){ $('dayInfo').textContent=teamName(team)+' · '+nice(TODAY()); fillBlocks(); open('ovDay'); }
   Store.onChange(function(col){ if (col==='blocks' && $('ovDay').classList.contains('on')) fillBlocks(); });
-  $('dayOut').onclick=function(){ close('ovDay'); if (ME.role==='scanner') signOut(); else { Scanner.close(); route(); } };
+  $('dayOut').onclick=function(){ close('ovDay'); if (ME.role==='scanner') safeSignOut(); else { Scanner.close(); route(); } };
   $('dayOk').onclick=function(){ block=$('dayBlock').value; if (!block) return; var id=TODAY()+'|'+team, td=Store.get('teamDays',id);
     if (!td || td.block!==block){ Store.put('teamDays',{id:id,date:TODAY(),team:team,block:block}); Store.log(ME.name, teamName(team)+' picking '+blockById(block).name+' on '+TODAY()); }
     close('ovDay'); head(); start(); };       // this tap also switches on band reading
@@ -1203,13 +1243,13 @@ var Scanner=(function(){
   $('scToday').onclick=function(){ var pds=Store.where('pickerDays',function(p){return p.date===TODAY() && p.team===team && bagsOf(p)>0;}).sort(function(a,b){return bagsOf(b)-bagsOf(a);});
     var e=teamEstimate(TODAY(),team);
     $('stBody').innerHTML='<div style="color:#94a3b8;margin-bottom:8px">'+fmt(e.bags)+' bags · '+fmt(e.binsSoFar,1)+' bins so far'+(e.endBins!=null&&e.state==='live'?' · about '+fmt(e.endBins,0)+' by '+minToHm(dayEnd()):'')+'</div><table><tr><th>Picker</th><th style="text-align:right">Bags</th><th style="text-align:right">Last</th></tr>'+
-      pds.map(function(p){ var w=worker(p.workerId); return '<tr><td>'+esc(wName(w))+' <span style="color:#94a3b8">#'+w.no+'</span></td><td style="text-align:right">'+bagsOf(p)+'</td><td style="text-align:right">'+(p.last?hm(p.last):'')+'</td></tr>'; }).join('')+'</table>';
+      pds.map(function(p){ var w=workerOr(p.workerId); return '<tr><td>'+esc(wName(w))+' <span style="color:#94a3b8">#'+w.no+'</span></td><td style="text-align:right">'+bagsOf(p)+'</td><td style="text-align:right">'+(p.last?hm(p.last):'')+'</td></tr>'; }).join('')+'</table>';
     open('ovSToday'); };
   $('stClose').onclick=function(){ close('ovSToday'); };
-  $('scMenu').onclick=function(){ var st=Store.sync(); $('smInfo').innerHTML=esc(ME.email)+' · '+esc(teamName(team))+'<br>Version '+APP_VERSION+'<br>'+(st.pending? 'Some bags are saved on this phone and still waiting to send':'Everything is sent')+(navigator.onLine?'':' · no signal')+'<br>'+battInfo(); open('ovSMenu'); };
+  $('scMenu').onclick=function(){ var st=Store.sync(); $('smInfo').innerHTML=esc(ME.name)+' · '+esc(teamName(team))+'<br>Version '+APP_VERSION+'<br>'+(st.pending? 'Some bags are saved on this phone and still waiting to send':'Everything is sent')+(navigator.onLine?'':' · no signal')+'<br>'+battInfo(); open('ovSMenu'); };
   $('smClose').onclick=function(){ close('ovSMenu'); };
   $('smBlock').onclick=function(){ close('ovSMenu'); askBlock(); };
-  $('smOut').onclick=function(){ close('ovSMenu'); if (ME.role==='scanner') signOut(); else { Scanner.close(); route(); } };
+  $('smOut').onclick=function(){ close('ovSMenu'); if (ME.role==='scanner') safeSignOut(); else { Scanner.close(); route(); } };
   $('scStart').onclick=start;
   if (TEST) $('scDemo').classList.remove('hide');
   if (TEST) window.__tap=onBand;
@@ -1235,7 +1275,7 @@ var Scanner=(function(){
       // once NFC has been allowed on this phone, start reading straight away (otherwise Android grabs the tap)
       if (navigator.permissions && 'NDEFReader' in window) navigator.permissions.query({name:'nfc'}).then(function(p){ if (p.state==='granted') start(); }).catch(function(){}); },
     openLink:function(){ team=VIEW.scanTeam||'T1'; linkOnly=true; $('smOut').textContent='Back to the office screens'; $('scan').classList.add('on'); head(); idle(); openBands(); },
-    close:function(){ ['scan','ovDay','ovKey','ovLink','ovBands','ovSToday','ovSMenu'].forEach(close); scanning=false; }
+    close:function(){ ['scan','ovDay','ovKey','ovLink','ovBands','ovSToday','ovSMenu'].forEach(close); stopNfc(); }
   };
 })();
 

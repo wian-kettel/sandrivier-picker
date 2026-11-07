@@ -42,7 +42,8 @@ service cloud.firestore {
     // numbered bands: which chip belongs to which band number (phones may link and replace chips)
     match /bands/{id} {
       allow read: if staff();
-      allow create, update: if office() || (scanner() && onlyKeys(['no', 'uid', 'oldUids', 'at', 'by']));
+      allow create, update: if (office() || (scanner() && onlyKeys(['no', 'uid', 'oldUids', 'at', 'by'])))
+        && string(request.resource.data.no) == id;
       allow delete: if office();
     }
 
@@ -52,8 +53,14 @@ service cloud.firestore {
     // bags per picker per day (counters). Phones may only touch the counting fields.
     match /pickerDays/{id} {
       allow read: if staff();
-      allow create, update: if office()
-        || (scanner() && onlyKeys(['date', 'workerId', 'team', 'block', 'no', 'bags', 'manual', 'first', 'last', 'h']));
+      // a phone adds exactly one bag per write (offline taps are sent one by one)
+      allow create: if office()
+        || (scanner() && onlyKeys(['date', 'workerId', 'team', 'block', 'no', 'bags', 'manual', 'first', 'last', 'h'])
+            && request.resource.data.bags == 1 && request.resource.data.get('manual', 0) <= 1);
+      allow update: if office()
+        || (scanner() && onlyKeys(['date', 'workerId', 'team', 'block', 'no', 'bags', 'manual', 'first', 'last', 'h'])
+            && request.resource.data.bags == resource.data.get('bags', 0) + 1
+            && request.resource.data.get('manual', 0) - resource.data.get('manual', 0) <= 1);
       allow delete: if office();
     }
 
@@ -73,7 +80,7 @@ service cloud.firestore {
 
     match /audit/{id} {
       allow read: if office();
-      allow create: if staff();
+      allow create: if staff() && request.resource.data.t <= request.time.toMillis() + 600000;
     }
   }
 }
