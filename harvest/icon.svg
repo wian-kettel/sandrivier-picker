@@ -1,22 +1,19 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#ffffff"/>
-  <!-- pear -->
-  <path d="M236 168
-           C 210 168 196 190 196 216
-           C 196 244 182 262 162 286
-           C 142 310 130 332 130 360
-           C 130 410 176 440 236 440
-           C 296 440 342 410 342 360
-           C 342 332 330 310 310 286
-           C 290 262 276 244 276 216
-           C 276 190 262 168 236 168 Z" fill="#3f8a55"/>
-  <!-- highlight -->
-  <path d="M182 352 C 182 322 196 304 212 290" stroke="#fff" stroke-width="12" stroke-linecap="round" fill="none"/>
-  <!-- stem + leaf -->
-  <path d="M236 170 C 234 146 238 128 248 112" stroke="#5b3a1e" stroke-width="14" stroke-linecap="round" fill="none"/>
-  <path d="M252 126 C 274 100 312 96 336 110 C 314 134 278 142 252 126 Z" fill="#1f3d2b"/>
-  <!-- contactless tap arcs -->
-  <path d="M352 236 C 366 252 366 276 352 292" stroke="#1f3d2b" stroke-width="14" stroke-linecap="round" fill="none"/>
-  <path d="M378 214 C 404 242 404 286 378 314" stroke="#1f3d2b" stroke-width="14" stroke-linecap="round" fill="none"/>
-  <path d="M404 192 C 442 232 442 296 404 336" stroke="#1f3d2b" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <!-- pear, centred (body spans x 156-356, y 150-430) -->
+  <path d="M256 160
+           C 229 160 215 182 215 209
+           C 215 238 201 257 180 282
+           C 160 306 148 329 148 357
+           C 148 405 196 432 256 432
+           C 316 432 364 405 364 357
+           C 364 329 352 306 332 282
+           C 311 257 297 238 297 209
+           C 297 182 283 160 256 160 Z" fill="#3f8a55"/>
+  <!-- soft highlight -->
+  <path d="M196 362 C 196 330 211 309 229 293" stroke="#ffffff" stroke-opacity=".55" stroke-width="13" stroke-linecap="round" fill="none"/>
+  <!-- stem -->
+  <path d="M256 163 C 254 139 258 120 268 103" stroke="#5b3a1e" stroke-width="13" stroke-linecap="round" fill="none"/>
+  <!-- leaf -->
+  <path d="M270 120 C 292 92 332 88 356 103 C 334 128 296 137 270 120 Z" fill="#1f3d2b"/>
 </svg>
