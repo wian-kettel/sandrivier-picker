@@ -291,7 +291,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.2';
+var APP_VERSION = '1.2.1';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -319,7 +319,7 @@ var DOW=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'], MON=['Jan','Feb','Mar','Apr
 function nice(s){ var d=parseYmd(s); return DOW[d.getDay()]+' '+d.getDate()+' '+MON[d.getMonth()]; }
 function niceShort(s){ var d=parseYmd(s); return d.getDate()+' '+MON[d.getMonth()]; }
 function R(n){ return 'R'+(Math.round(n*100)/100).toLocaleString('en-ZA',{minimumFractionDigits:2,maximumFractionDigits:2}); }
-function fmt(n,dp){ return (dp? (Math.round(n*Math.pow(10,dp))/Math.pow(10,dp)).toFixed(dp) : Math.round(n)).toLocaleString('en-ZA'); }
+function fmt(n,dp){ dp=dp||0; return (Math.round(n*Math.pow(10,dp))/Math.pow(10,dp)).toLocaleString('en-ZA',{minimumFractionDigits:dp,maximumFractionDigits:dp}); }
 function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
 function normUid(s){ var h=String(s||'').toUpperCase().replace(/[^0-9A-F]/g,''); return h.length<4?'':h.match(/.{1,2}/g).join(':'); }
 function toast(msg){ var t=$('toast'); t.textContent=msg; t.classList.add('on'); clearTimeout(toast._t); toast._t=setTimeout(function(){t.classList.remove('on');},2200); }
@@ -656,8 +656,8 @@ VIEWS.today=function(el){
 
   // headline
   h+='<div class="grid g3">';
-  h+='<div class="card kpi hero"><div class="lbl">'+(anyLive?'Estimated bins by '+minToHm(dayEnd()):'Bins picked (from bags)')+'</div><div class="val num">'+fmt(endBins,0)+'</div><div class="sub">'+
-     (anyLive?fmt(bags/st.bagsPerBin,0)+' bins so far, at the pace since the first bag':'Bags ÷ '+st.bagsPerBin+' bags per bin')+'</div></div>';
+  h+='<div class="card kpi hero"><div class="lbl">'+(anyLive?'Estimated bins by '+minToHm(dayEnd()):'Bins picked (from bags)')+'</div><div class="val num">'+fmt(endBins,anyLive?0:1)+'</div><div class="sub">'+
+     (anyLive?fmt(bags/st.bagsPerBin,1)+' bins so far, at the pace since the first bag':'Bags ÷ '+st.bagsPerBin+' bags per bin')+'</div></div>';
   h+='<div class="card kpi"><div class="lbl">Bags so far</div><div class="val num">'+fmt(bags)+'</div><div class="sub">'+est.reduce(function(a,e){return a+e.pickers;},0)+' pickers scanned</div></div>';
   h+='<div class="card kpi"><div class="lbl">Actual bins (Fanus)</div><div class="val num">'+(actual.length?fmt(actTot):'–')+'</div><div class="sub">'+
      (actual.length? fmt(actExp)+' export · '+fmt(actTot-actExp)+' juice' : 'Not entered yet. <a href="#bins">Enter bins</a>')+'</div></div>';
@@ -669,11 +669,11 @@ VIEWS.today=function(el){
     var bl=e.block?blockById(e.block):null;
     h+='<div class="card"><div class="team-head"><h3>'+esc(teamName(e.team))+'</h3>'+
       (bl?'<span class="tag">'+esc(bl.name)+'</span><span class="tag g">'+esc(vShort(bl.variety))+'</span>':(e.bags?'<span class="tag a">Block not chosen</span>':'<span class="tag a">Not started</span>'))+
-      (e.state==='live'?'<span class="tag b">Picking</span>':'')+'</div>';
+      (e.pickers?'<span class="tag b">'+e.pickers+' picker'+(e.pickers>1?'s':'')+(e.state==='live'?' picking':'')+'</span>':'')+'</div>';
     if (e.state==='none'){ h+='<div class="mute">No bags scanned yet.</div></div>'; return; }
     h+='<div class="stats">'+
       '<div class="stat"><b class="num">'+fmt(e.bags)+'</b><span>bags so far</span></div>'+
-      '<div class="stat"><b class="num">'+fmt(e.binsSoFar,0)+'</b><span>bins so far</span></div>'+
+      '<div class="stat"><b class="num">'+fmt(e.binsSoFar,1)+'</b><span>bins so far</span></div>'+
       '<div class="stat"><b class="num">'+(e.endBins!=null?fmt(e.endBins,0):'…')+'</b><span>'+(e.state==='live'?'est. bins by '+minToHm(dayEnd()):'bins for the day')+'</span></div></div>';
     h+='<div class="small mute" style="margin-top:10px">';
     if (e.state==='early') h+='Started '+minToHm(e.startM)+'. Estimate shows after 20 minutes of picking.';
@@ -1194,7 +1194,7 @@ var Scanner=(function(){
   // today
   $('scToday').onclick=function(){ var pds=Store.where('pickerDays',function(p){return p.date===TODAY() && p.team===team && bagsOf(p)>0;}).sort(function(a,b){return bagsOf(b)-bagsOf(a);});
     var e=teamEstimate(TODAY(),team);
-    $('stBody').innerHTML='<div style="color:#94a3b8;margin-bottom:8px">'+fmt(e.bags)+' bags · '+fmt(e.binsSoFar,0)+' bins so far'+(e.endBins!=null&&e.state==='live'?' · about '+fmt(e.endBins,0)+' by '+minToHm(dayEnd()):'')+'</div><table><tr><th>Picker</th><th style="text-align:right">Bags</th><th style="text-align:right">Last</th></tr>'+
+    $('stBody').innerHTML='<div style="color:#94a3b8;margin-bottom:8px">'+fmt(e.bags)+' bags · '+fmt(e.binsSoFar,1)+' bins so far'+(e.endBins!=null&&e.state==='live'?' · about '+fmt(e.endBins,0)+' by '+minToHm(dayEnd()):'')+'</div><table><tr><th>Picker</th><th style="text-align:right">Bags</th><th style="text-align:right">Last</th></tr>'+
       pds.map(function(p){ var w=worker(p.workerId); return '<tr><td>'+esc(wName(w))+' <span style="color:#94a3b8">#'+w.no+'</span></td><td style="text-align:right">'+bagsOf(p)+'</td><td style="text-align:right">'+(p.last?hm(p.last):'')+'</td></tr>'; }).join('')+'</table>';
     open('ovSToday'); };
   $('stClose').onclick=function(){ close('ovSToday'); };
