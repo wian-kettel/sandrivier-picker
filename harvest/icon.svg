@@ -9,14 +9,14 @@
            C 296 440 342 410 342 360
            C 342 332 330 310 310 286
            C 290 262 276 244 276 216
-           C 276 190 262 168 236 168 Z" fill="#111"/>
+           C 276 190 262 168 236 168 Z" fill="#3f8a55"/>
   <!-- highlight -->
   <path d="M182 352 C 182 322 196 304 212 290" stroke="#fff" stroke-width="12" stroke-linecap="round" fill="none"/>
   <!-- stem + leaf -->
-  <path d="M236 170 C 234 146 238 128 248 112" stroke="#111" stroke-width="14" stroke-linecap="round" fill="none"/>
-  <path d="M252 126 C 274 100 312 96 336 110 C 314 134 278 142 252 126 Z" fill="#111"/>
+  <path d="M236 170 C 234 146 238 128 248 112" stroke="#5b3a1e" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M252 126 C 274 100 312 96 336 110 C 314 134 278 142 252 126 Z" fill="#1f3d2b"/>
   <!-- contactless tap arcs -->
-  <path d="M352 236 C 366 252 366 276 352 292" stroke="#111" stroke-width="14" stroke-linecap="round" fill="none"/>
-  <path d="M378 214 C 404 242 404 286 378 314" stroke="#111" stroke-width="14" stroke-linecap="round" fill="none"/>
-  <path d="M404 192 C 442 232 442 296 404 336" stroke="#111" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M352 236 C 366 252 366 276 352 292" stroke="#1f3d2b" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M378 214 C 404 242 404 286 378 314" stroke="#1f3d2b" stroke-width="14" stroke-linecap="round" fill="none"/>
+  <path d="M404 192 C 442 232 442 296 404 336" stroke="#1f3d2b" stroke-width="14" stroke-linecap="round" fill="none"/>
 </svg>
