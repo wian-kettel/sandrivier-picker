@@ -1,7 +1,7 @@
 // Lets the Harvest Tracker open with no signal (the FORT 1 in the orchard).
 // App files: network first, phone's copy when offline. Firebase and Excel libraries: kept once downloaded.
 // Data itself is handled by Firebase's own offline storage, not here.
-const CACHE = 'harvest-v8';
+const CACHE = 'harvest-v9';
 const FILES = ['./', 'index.html', 'config.js', 'manifest.webmanifest', 'icon-192.png', 'icon-512.png'];
 const LIBS = /^https:\/\/(www\.gstatic\.com\/firebasejs\/|cdn\.jsdelivr\.net\/npm\/xlsx@)/;
 self.addEventListener('install', e => { e.waitUntil(caches.open(CACHE).then(c => c.addAll(FILES))); self.skipWaiting(); });

@@ -338,7 +338,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.4.1';
+var APP_VERSION = '1.4.2';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -712,13 +712,18 @@ function lineChart(series, opts){
 }
 function barChart(bars, opts){
   // bars: [{label, v, color, faded}]
-  var W=window.innerWidth<640?400:640,H=200,L=34,T=10,B=26, max=Math.max.apply(null,bars.map(function(b){return b.v;}).concat([1]))*1.1;
+  var NARROW=window.innerWidth<640, W=NARROW?400:640,H=200,L=36,T=12,B=26;
+  // round the top of the scale to a tidy number (10, 20, 50, 100 ...)
+  var top=Math.max.apply(null,bars.map(function(b){return b.v;}).concat([1])), stp=Math.pow(10,Math.floor(Math.log10(top))), max;
+  max=[1,2,2.5,5,10].map(function(m){return m*stp;}).filter(function(m){return m>=top;})[0]||10*stp;
   var bw=(W-L-8)/bars.length;
   var g='<svg viewBox="0 0 '+W+' '+H+'">';
-  [0,0.5,1].forEach(function(f){ var y=T+(1-f)*(H-T-B); g+='<line x1="'+L+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="#e3e0d8"/><text x="'+(L-6)+'" y="'+(y+4)+'" font-size="13" fill="#6b736d" text-anchor="end">'+fmt(max*f)+'</text>'; });
+  [0,0.5,1].forEach(function(f){ var y=T+(1-f)*(H-T-B); g+='<line x1="'+L+'" x2="'+W+'" y1="'+y+'" y2="'+y+'" stroke="#e3e0d8"/><text x="'+(L-6)+'" y="'+(y+4)+'" font-size="12" fill="#6b736d" text-anchor="end">'+fmt(max*f)+'</text>'; });
   bars.forEach(function(b,i){ var h=b.v/max*(H-T-B), x=L+i*bw+bw*0.15;
     g+='<rect x="'+x+'" y="'+(H-B-h)+'" width="'+(bw*0.7)+'" height="'+h+'" rx="3" fill="'+(b.color||'#2f6b45')+'"'+(b.faded?' opacity=".35"':'')+'/>';
-    g+='<text x="'+(x+bw*0.35)+'" y="'+(H-8)+'" font-size="13" fill="#6b736d" text-anchor="middle">'+esc(b.label)+'</text>'; });
+    if (b.v && !NARROW) g+='<text x="'+(x+bw*0.35)+'" y="'+(H-B-h-4)+'" font-size="11" fill="#6b736d" text-anchor="middle">'+fmt(b.v)+'</text>';
+    var lab = NARROW ? b.short : b.label;
+    if (lab!=null && (!NARROW || i%2===0)) g+='<text x="'+(x+bw*0.35)+'" y="'+(H-7)+'" font-size="12" fill="#6b736d" text-anchor="middle">'+esc(lab)+'</text>'; });
   return g+'</svg>';
 }
 
@@ -786,8 +791,8 @@ VIEWS.today=function(el){
      '<div class="small mute" style="margin-top:8px">Pair these with a strong picker. <a href="#pickers">All pickers</a></div></div>';
   h+='</div>';
   if (hasScans){
-    var hb=[]; for (var x=6;x<=16;x++) hb.push({label:x+':00',v:hours[x]||0,faded:!inSession(x*60+30)});
-    h+='<div class="card chart"><h3>Bags per hour</h3>'+barChart(hb)+'</div>';
+    var hb=[]; for (var x=6;x<=16;x++) hb.push({label:x+':00',short:pad(x)+'h',v:hours[x]||0,faded:!inSession(x*60+30)});
+    h+='<div class="card chart"><h3>Bags per hour</h3>'+barChart(hb)+'<div class="small mute" style="margin-top:4px">Faded bars are breakfast and lunch.</div></div>';
   }
   // needs attention
   var attn=[];
