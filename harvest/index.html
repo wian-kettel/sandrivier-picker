@@ -91,6 +91,8 @@ th,td{padding:8px 8px;border-bottom:1px solid var(--line);text-align:left;vertic
 th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:650;background:var(--card);position:sticky;top:0}
 td.r,th.r{text-align:right}
 tr.tot td{font-weight:750;border-top:2px solid var(--ink);border-bottom:0}
+tr.grp td{background:var(--soft);padding-top:10px;padding-bottom:8px;border-bottom:0}
+tr.sub td{font-weight:700;border-top:1px solid var(--ink);border-bottom:0;padding-bottom:16px}
 tbody tr:hover{background:#faf9f5}
 .tw{overflow-x:auto;margin:0 -16px;padding:0 16px}
 .click{cursor:pointer}
@@ -338,7 +340,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.4.2';
+var APP_VERSION = '1.4.3';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -894,14 +896,22 @@ VIEWS.bins=function(el){
   var act=Store.where('bins',function(b){return b.date===date;}).reduce(function(a,b){return a+b.export+b.juice;},0);
   if (estBins>0) h+='<div class="note b" style="margin:12px 0 0">Bags scanned this day = <b>'+fmt(estBins,1)+' bins</b> at '+st.bagsPerBin+' bags a bin.'+(act?' Whiteboard says <b>'+act+'</b>, a difference of '+fmt(act-estBins,1)+'.':'')+'</div>';
   h+='</div>';
-  // history list
-  var byDate={}; Store.all('bins').forEach(function(b){ var d=byDate[b.date]||(byDate[b.date]={date:b.date,exp:0,juice:0,v:{}}); d.exp+=b.export; d.juice+=b.juice; d.v[b.variety]=1; });
-  var days=Object.keys(byDate).sort().reverse();
-  var se=0,sj=0; days.forEach(function(d){ se+=byDate[d].exp; sj+=byDate[d].juice; });
-  h+='<div class="card"><h3>This season</h3><div class="small mute" style="margin-bottom:6px">'+fmt(se+sj)+' bins: '+fmt(se)+' export ('+(se+sj?Math.round(se/(se+sj)*100):0)+'%) and '+fmt(sj)+' juice.</div><div class="tw"><table><thead><tr><th>Day</th><th class="hide-m">Variety</th><th class="r">Export</th><th class="r">Juice</th><th class="r">Total</th><th class="r">Export %</th><th class="r hide-m">From bags</th></tr></thead><tbody>'+
-    days.map(function(d){ var x=byDate[d], fb=st.teams.reduce(function(a,t){return a+teamEstimate(d,t.id).binsSoFar;},0);
-      return '<tr class="click" data-d="'+d+'"><td>'+nice(d)+'</td><td class="hide-m">'+Object.keys(x.v).map(vShort).join(', ')+'</td><td class="r num">'+x.exp+'</td><td class="r num">'+x.juice+'</td><td class="r num"><b>'+(x.exp+x.juice)+'</b></td><td class="r num">'+pct(x.exp,x.exp+x.juice)+'%</td><td class="r num mute hide-m">'+(fb?fmt(fb,1):'')+'</td></tr>'; }).join('')+
-    '<tr class="tot"><td>Season</td><td class="hide-m"></td><td class="r num">'+se+'</td><td class="r num">'+sj+'</td><td class="r num">'+(se+sj)+'</td><td class="r num">'+pct(se,se+sj)+'%</td><td class="hide-m"></td></tr></tbody></table></div></div>';
+  // this season, grouped by variety (oldest day first), with a total per variety and for the season
+  var all=Store.all('bins').filter(function(b){ return (b.export||0)+(b.juice||0)>0; });
+  var se=0,sj=0; all.forEach(function(b){ se+=b.export; sj+=b.juice; });
+  function fromBags(d,v){ var n=0; Store.where('pickerDays',function(p){ var bl=blockById(p.block); return p.date===d && bl && bl.variety===v; }).forEach(function(p){ n+=bagsOf(p); }); return n/st.bagsPerBin; }
+  var body='';
+  VARIETIES.forEach(function(v){
+    var rows=all.filter(function(b){return b.variety===v.code;}).sort(function(a,b){return a.date<b.date?-1:1;}); if (!rows.length) return;
+    var ve=0,vj=0;
+    body+='<tr class="grp"><td colspan="6"><b>'+esc(vShort(v.code))+'</b> <span class="mute small">· '+rows.length+' picking day'+(rows.length>1?'s':'')+'</span></td></tr>';
+    rows.forEach(function(b){ ve+=b.export; vj+=b.juice; var fb=fromBags(b.date,v.code);
+      body+='<tr class="click" data-d="'+b.date+'"><td>'+nice(b.date)+'</td><td class="r num">'+b.export+'</td><td class="r num">'+b.juice+'</td><td class="r num"><b>'+(b.export+b.juice)+'</b></td><td class="r num">'+pct(b.export,b.export+b.juice)+'%</td><td class="r num mute hide-m">'+(fb?fmt(fb,1):'')+'</td></tr>'; });
+    body+='<tr class="sub"><td>'+esc(vShort(v.code))+' total</td><td class="r num">'+fmt(ve)+'</td><td class="r num">'+fmt(vj)+'</td><td class="r num">'+fmt(ve+vj)+'</td><td class="r num">'+pct(ve,ve+vj)+'%</td><td class="hide-m"></td></tr>';
+  });
+  h+='<div class="card"><h3>This season</h3><div class="small mute" style="margin-bottom:6px">'+fmt(se+sj)+' bins: '+fmt(se)+' export ('+pct(se,se+sj)+'%) and '+fmt(sj)+' juice. Tap a day to open it.</div><div class="tw"><table><thead><tr><th>Day</th><th class="r">Export</th><th class="r">Juice</th><th class="r">Total</th><th class="r">Export %</th><th class="r hide-m">From bags</th></tr></thead><tbody>'+
+    (body||'<tr><td colspan="6" class="empty">No bins entered yet this season.</td></tr>')+
+    '<tr class="tot"><td>Season</td><td class="r num">'+fmt(se)+'</td><td class="r num">'+fmt(sj)+'</td><td class="r num">'+fmt(se+sj)+'</td><td class="r num">'+pct(se,se+sj)+'%</td><td class="hide-m"></td></tr></tbody></table></div></div>';
   el.innerHTML=h;
   $('bDate').onchange=function(){ VIEW.binDate=this.value||null; VIEW.binExtra=null; route(); };
   if ($('bAdd')) $('bAdd').onchange=function(){ VIEW.binExtra=this.value; route(); };
