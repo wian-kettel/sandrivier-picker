@@ -16,8 +16,8 @@
 <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js" defer></script>
 <style>
 :root{
-  --bg:#f5f3ee; --card:#ffffff; --ink:#1c2420; --mute:#6b736d; --line:#e3e0d8; --soft:#efece4;
-  --green:#2f6b45; --green-d:#1f3d2b; --green-s:#e5efe7; --amber:#b7791f; --amber-s:#fbf1df;
+  --bg:#f5f3ee; --card:#ffffff; --ink:#1c2420; --mute:#5b625d; --line:#e3e0d8; --soft:#efece4;
+  --green:#2f6b45; --green-d:#1f3d2b; --green-s:#e5efe7; --amber:#b7791f; --amber-t:#8a5a12; --amber-s:#fbf1df;
   --red:#b42318; --red-s:#fbe9e7; --blue:#2c5d8a; --blue-s:#e6eef6; --pear:#c9b23a;
   --r:14px; --sh:0 1px 2px rgba(28,36,32,.06),0 2px 10px rgba(28,36,32,.04);
 }
@@ -44,7 +44,7 @@ input[type=time],input[type=date]{-webkit-appearance:none;appearance:none;min-he
 .grow{flex:1}
 .pill{font-size:12px;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.14);white-space:nowrap}
 .pill.demo{background:var(--pear);color:#2b2608;font-weight:700}
-.user{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:4px 11px;font-size:13px;cursor:pointer}
+.user{background:none;border:1px solid rgba(255,255,255,.35);color:#fff;border-radius:999px;padding:0 14px;min-height:44px;font-size:14px;cursor:pointer}
 .tabs{display:flex;gap:4px;overflow-x:auto;max-width:1180px;margin:8px auto 0;scrollbar-width:none}
 .tabs::-webkit-scrollbar{display:none}
 .tab{background:none;border:0;color:rgba(255,255,255,.72);padding:9px 12px 11px;font-weight:600;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap;cursor:pointer}
@@ -70,7 +70,7 @@ main{max-width:1180px;margin:0 auto;padding:16px 16px 80px}
 .team-head{display:flex;align-items:baseline;gap:8px;margin-bottom:8px}
 .team-head h3{margin:0}
 .tag{display:inline-block;font-size:12px;font-weight:650;padding:2px 8px;border-radius:999px;background:var(--soft);color:var(--ink)}
-.tag.g{background:var(--green-s);color:var(--green)} .tag.a{background:var(--amber-s);color:var(--amber)} .tag.r{background:var(--red-s);color:var(--red)} .tag.b{background:var(--blue-s);color:var(--blue)}
+.tag.g{background:var(--green-s);color:var(--green)} .tag.a{background:var(--amber-s);color:var(--amber-t)} .tag.r{background:var(--red-s);color:var(--red)} .tag.b{background:var(--blue-s);color:var(--blue)}
 .stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
 .stat{background:var(--soft);border-radius:10px;padding:8px 10px}
 .stat b{display:block;font-size:22px;line-height:1.15}
@@ -85,10 +85,31 @@ main{max-width:1180px;margin:0 auto;padding:16px 16px 80px}
 .morelist button{display:flex;align-items:center;gap:12px;width:100%;background:var(--soft);border:0;border-radius:12px;padding:14px 16px;margin-top:8px;font-size:16px;font-weight:650;text-align:left;cursor:pointer}
 .morelist svg{width:22px;height:22px;stroke:var(--green);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 .audit-what{overflow-wrap:anywhere;min-width:0}
+.pear{width:28px;height:28px;border-radius:7px;flex:none;display:block}
+#gate h1 .pear{width:40px;height:40px;border-radius:10px}
+.nowrap{white-space:nowrap}
+.tapcheck{display:inline-flex;gap:10px;align-items:center;min-height:44px;margin-top:6px;cursor:pointer}.tapcheck input{width:22px;height:22px}
+.daystep{display:flex;align-items:center;gap:6px}
+.daystep .btn{width:44px;padding:0;font-size:22px;line-height:1}
+.dlabel{position:relative;display:flex;align-items:center;min-height:44px;padding:0 14px;border:1px solid var(--line);border-radius:10px;background:#fff;font-weight:650;white-space:nowrap;cursor:pointer}
+.dlabel input{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;border:0;padding:0}
+.weekpick{display:flex;gap:8px;align-items:center;flex:1;justify-content:flex-end;min-width:0}
+.weekpick select{width:auto;max-width:100%;min-height:44px}
+.btn.icon{display:inline-flex;align-items:center;gap:6px}.btn.icon svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.paystat{margin-top:12px;padding-top:10px;border-top:1px solid rgba(255,255,255,.18);font-size:14px;font-weight:650;color:rgba(255,255,255,.9)}
+.paystat.ok{color:#bfe5c8}
+.btn.light{margin-top:10px;width:100%;background:#fff;color:var(--green-d);border-color:#fff}
+.empty-card{text-align:center;padding:22px 16px}
+.g-rank{grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}
+@media (min-width:1200px){.g-rank{grid-template-columns:1fr 1fr 1.1fr}}
+.kwho{text-align:center;font-size:22px;font-weight:750;min-height:30px;color:#94a3b8}.kwho.ok{color:#4ade80}.kwho.bad{color:#f87171}
+#kOk:disabled{opacity:.4}
+.pw{position:relative}.pw input{padding-right:70px}
+#gate .login .pw button{position:absolute;right:6px;top:50%;transform:translateY(-50%);width:auto;margin:0;padding:8px 12px;min-height:36px;background:rgba(255,255,255,.12);color:#fff;border:0;font-size:14px;border-radius:9px}
 
 table{width:100%;border-collapse:collapse}
 th,td{padding:8px 8px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
-th{font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:650;background:var(--card);position:sticky;top:0}
+th{white-space:nowrap;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:var(--mute);font-weight:650;background:var(--card);position:sticky;top:0}
 td.r,th.r{text-align:right}
 tr.tot td{font-weight:750;border-top:2px solid var(--ink);border-bottom:0}
 tr.grp td{background:var(--soft);padding-top:10px;padding-bottom:8px;border-bottom:0}
@@ -97,26 +118,26 @@ tbody tr:hover{background:#faf9f5}
 .tw{overflow-x:auto;margin:0 -16px;padding:0 16px}
 .click{cursor:pointer}
 
-.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;font-weight:620;cursor:pointer}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;min-height:44px;font-weight:620;cursor:pointer}
 .btn.p{background:var(--green);border-color:var(--green);color:#fff}
 .btn.w{background:var(--amber-s);border-color:#efd9ae;color:#7a4e0e}
 .btn.d{color:var(--red)}
 .btn:disabled{opacity:.5;cursor:default}
-.btn.sm{padding:5px 10px;font-size:13px}
+.btn.sm{padding:5px 12px;font-size:13px;min-height:40px}
 .seg{display:inline-flex;background:var(--soft);border-radius:10px;padding:3px}
-.seg button{border:0;background:none;padding:6px 12px;border-radius:8px;font-weight:620;font-size:13px;cursor:pointer;color:var(--mute)}
+.seg button{border:0;background:none;padding:6px 12px;min-height:40px;border-radius:8px;font-weight:620;font-size:13px;cursor:pointer;color:var(--mute)}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
 input[type=text],input[type=number],input[type=date],input[type=time],input[type=search],select,textarea{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;width:100%}
-input.cell{width:84px;max-width:22vw;padding:6px 8px;text-align:right}
+input.cell{width:84px;max-width:22vw;min-height:44px;padding:6px 8px;text-align:right}
 label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10px 0 4px}
 .fr{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 12px}
 .bandgrid{display:flex;flex-wrap:wrap;gap:6px}
-.bandcell{width:40px;height:34px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:650;background:var(--soft);color:var(--mute);cursor:pointer;border:1.5px solid transparent}
-.bandcell.worn{background:var(--green);color:#fff}.bandcell.free{background:var(--green-s);color:var(--green);border-color:#bcd6c3}.bandcell.nochip{background:var(--amber-s);color:var(--amber);border-color:#efd9ae}
+.bandcell{width:44px;height:44px;border-radius:8px;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:650;background:var(--soft);color:var(--mute);cursor:pointer;border:1.5px solid transparent}
+.bandcell.worn{background:var(--green);color:#fff}.bandcell.free{background:var(--green-s);color:var(--green);border-color:#bcd6c3}.bandcell.nochip{background:var(--amber-s);color:var(--amber-t);border-color:#efd9ae}
 .legend i.lg{width:12px;height:12px;border-radius:3px;background:var(--soft)}.legend i.lg.worn{background:var(--green)}.legend i.lg.free{background:var(--green-s);border:1px solid #bcd6c3}.legend i.lg.nochip{background:var(--amber-s);border:1px solid #efd9ae}
-.split{height:8px;border-radius:4px;background:var(--amber-s);overflow:hidden;margin-top:8px;border:1px solid #efd9ae}.split i{display:block;height:100%;background:var(--green)}
+.split{height:8px;border-radius:4px;background:#e2b964;overflow:hidden;margin-top:8px;border:1px solid #efd9ae}.split i{display:block;height:100%;background:var(--green)}
 .hero .split{background:rgba(255,255,255,.18);border-color:transparent}.hero .split i{background:var(--pear)}
-.check{width:26px;height:26px;border-radius:7px;border:1.5px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800;color:#fff}
+.check{width:44px;height:44px;border-radius:10px;font-size:18px;border:1.5px solid var(--line);background:#fff;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;font-weight:800;color:#fff}
 .check.on{background:var(--green);border-color:var(--green)}
 .note{background:var(--amber-s);border:1px solid #efd9ae;color:#6b4510;border-radius:12px;padding:10px 12px;font-size:14px;margin-bottom:14px}
 .note.b{background:var(--blue-s);border-color:#c8d9ea;color:#1d3f5f}
@@ -169,7 +190,7 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
 #scan .sbar button,#scan .big{font-size:18px;padding:16px 10px;border:0;border-radius:10px;background:#334155;color:#f8fafc;font-weight:650;cursor:pointer}
 #scan .big{background:#15803d;font-size:26px;padding:22px 40px;margin-top:20px}
 #scan .demo-tap{margin-top:14px;background:#475569;font-size:15px;padding:10px 16px;border-radius:10px;border:0;color:#fff;cursor:pointer}
-.sov{position:fixed;inset:0;background:rgba(2,6,23,.95);z-index:70;display:none;flex-direction:column;padding:20px;overflow:auto;color:#f8fafc}
+.sov{position:fixed;inset:0;background:#0b1222;z-index:70;display:none;flex-direction:column;padding:20px;overflow:auto;color:#f8fafc}
 .sov.on{display:flex}
 .sov h2{margin-bottom:12px;font-size:22px}
 .sov label{display:block;margin:12px 0 4px;color:#94a3b8;font-size:15px}
@@ -203,6 +224,9 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
   .g4{grid-template-columns:1fr 1fr}
   .g4>.hero{grid-column:1/-1;order:-1}
   .g4>.card:last-child:nth-child(4){grid-column:1/-1}
+  .paygrid{grid-template-columns:1fr 1fr}.paygrid>.hero{grid-column:1/-1}
+  .bar h2{flex:none}
+  .daystep{flex:1;justify-content:flex-end}
   .kpi .lbl{font-size:11px}
   .kpi .sub{font-size:12.5px}
   .stats{gap:6px}.stat{padding:10px}.stat b{font-size:22px}
@@ -221,11 +245,11 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
 
 <div id="gate">
   <div class="box">
-    <h1><span style="width:30px;height:30px;border-radius:50% 50% 50% 0;background:var(--pear);transform:rotate(-45deg);display:inline-block"></span>Harvest Tracker</h1>
+    <h1><svg class="pear" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#fff"/><path d="M256 160C229 160 215 182 215 209C215 238 201 257 180 282C160 306 148 329 148 357C148 405 196 432 256 432C316 432 364 405 364 357C364 329 352 306 332 282C311 257 297 238 297 209C297 182 283 160 256 160Z" fill="#3f8a55"/><path d="M196 362C196 330 211 309 229 293" stroke="#fff" stroke-opacity=".55" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M256 163C254 139 258 120 268 103" stroke="#5b3a1e" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M270 120C292 92 332 88 356 103C334 128 296 137 270 120Z" fill="#1f3d2b"/></svg>Harvest Tracker</h1>
     <p style="opacity:.8;margin:8px 0 0">Sandrivier, Barrydale</p>
     <form id="login" class="login" autocomplete="on">
       <label>Email</label><input type="email" id="lgEmail" autocomplete="username" required>
-      <label>Password</label><input type="password" id="lgPw" autocomplete="current-password" required>
+      <label>Password</label><div class="pw"><input type="password" id="lgPw" autocomplete="current-password" required><button type="button" id="lgEye" aria-label="Show password">Show</button></div>
       <button type="submit" id="lgGo">Sign in</button>
       <div id="lgMsg" class="small" style="min-height:20px;margin-top:10px;color:#fde68a"></div>
       <a href="#" id="lgForgot" class="small" style="color:rgba(255,255,255,.7)">Forgot password</a>
@@ -236,7 +260,7 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
 
 <div class="top">
   <div class="top-row">
-    <div class="brand"><i></i>Harvest Tracker</div>
+    <div class="brand"><svg class="pear" viewBox="0 0 512 512" aria-hidden="true"><rect width="512" height="512" rx="112" fill="#fff"/><path d="M256 160C229 160 215 182 215 209C215 238 201 257 180 282C160 306 148 329 148 357C148 405 196 432 256 432C316 432 364 405 364 357C364 329 352 306 332 282C311 257 297 238 297 209C297 182 283 160 256 160Z" fill="#3f8a55"/><path d="M196 362C196 330 211 309 229 293" stroke="#fff" stroke-opacity=".55" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M256 163C254 139 258 120 268 103" stroke="#5b3a1e" stroke-width="13" stroke-linecap="round" fill="none"/><path d="M270 120C292 92 332 88 356 103C334 128 296 137 270 120Z" fill="#1f3d2b"/></svg>Harvest Tracker</div>
     <span class="pill" id="syncPill">…</span>
     <span class="grow"></span>
     <button class="user" id="userBtn"></button>
@@ -284,6 +308,7 @@ label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10
 <div class="sov" id="ovKey">
   <h2>Type the picker number</h2>
   <div class="kpd" id="kpd"></div>
+  <div id="kWho" class="kwho">Type the number on the band</div>
   <div class="keys" id="keys"></div>
   <div class="row"><button id="kDone">Done</button><button class="p" id="kOk">Count bag</button></div>
   <div class="smsg" id="kMsg"></div>
@@ -340,7 +365,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.4.3';
+var APP_VERSION = '1.5';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -481,6 +506,12 @@ function freeBands(){ var used={}, a=[]; Store.where('workers',function(w){retur
 function whoName(w){ if (!w || String(w).indexOf('@')<0) return w||''; var u=Store.where('users',function(x){return x.email===w;})[0]; return u&&u.name ? u.name : String(w).split('@')[0]; }
 function pct(a,t){ return t ? Math.round(a/t*100) : 0; }
 function splitBar(e,j){ var t=e+j; return t ? '<div class="split"><i style="width:'+pct(e,t)+'%"></i></div>' : ''; }
+function dayStepper(id,date){ var t=TODAY();
+  return '<div class="daystep" data-for="'+id+'"><button type="button" class="btn" data-step="-1" aria-label="Previous day">‹</button>'+
+    '<label class="dlabel"><span>'+(date===t?'Today, ':'')+nice(date)+'</span><input type="date" id="'+id+'" value="'+date+'" aria-label="Choose a day"></label>'+
+    '<button type="button" class="btn" data-step="1" aria-label="Next day"'+(date>=t?' disabled':'')+'>›</button></div>'; }
+function bindStepper(el,id,date,set){ $(id).onchange=function(){ set(this.value||null); route(); };
+  el.querySelectorAll('.daystep[data-for="'+id+'"] [data-step]').forEach(function(b){ b.onclick=function(){ var d=addDays(date,+b.getAttribute('data-step')); set(d>=TODAY()?null:d); route(); }; }); }
 function lastPicked(wid){ var d=''; Store.where('pickerDays',function(p){return p.workerId===wid && bagsOf(p)>0;}).forEach(function(p){ if (p.date>d) d=p.date; }); return d; }
 function saveBand(no, chip, who){ var b=bandFor(no), f={no:+no,uid:chip,at:Date.now(),by:who};
   if (b && b.uid && b.uid!==chip) f.oldUids=Store.arrayAdd(b.uid);
@@ -622,6 +653,7 @@ $('login').onsubmit=function(e){ e.preventDefault(); $('lgMsg').textContent='Sig
   signInWithEmailAndPassword(AUTH, $('lgEmail').value.trim(), $('lgPw').value).then(function(){ $('lgMsg').textContent=''; $('lgPw').value=''; })
   .catch(function(err){ $('lgMsg').textContent = /invalid|wrong|not-found|credential/.test(err.code||'') ? 'Email or password is wrong.' : err.code==='auth/network-request-failed' ? 'No signal. The first sign-in on a device needs signal.' : 'Could not sign in ('+err.code+').'; })
   .then(function(){ $('lgGo').disabled=false; }); };
+$('lgEye').onclick=function(){ var i=$('lgPw'), show=i.type==='password'; i.type=show?'text':'password'; this.textContent=show?'Hide':'Show'; this.setAttribute('aria-label',show?'Hide password':'Show password'); };
 $('lgForgot').onclick=function(e){ e.preventDefault(); var em=$('lgEmail').value.trim(); if (!em) return $('lgMsg').textContent='Type your email first, then tap Forgot password.';
   sendPasswordResetEmail(AUTH, em).then(function(){ $('lgMsg').textContent='If that email has an account, a reset link is on its way.'; }).catch(function(){ $('lgMsg').textContent='If that email has an account, a reset link is on its way.'; }); };
 $('userBtn').onclick=function(){
@@ -714,7 +746,7 @@ function lineChart(series, opts){
 }
 function barChart(bars, opts){
   // bars: [{label, v, color, faded}]
-  var NARROW=window.innerWidth<640, W=NARROW?400:640,H=200,L=36,T=12,B=26;
+  var NARROW=window.innerWidth<640||window.innerWidth>=1200, W=NARROW?400:640,H=200,L=36,T=12,B=26;
   // round the top of the scale to a tidy number (10, 20, 50, 100 ...)
   var top=Math.max.apply(null,bars.map(function(b){return b.v;}).concat([1])), stp=Math.pow(10,Math.floor(Math.log10(top))), max;
   max=[1,2,2.5,5,10].map(function(m){return m*stp;}).filter(function(m){return m>=top;})[0]||10*stp;
@@ -746,7 +778,7 @@ VIEWS.today=function(el){
   var isToday=date===TODAY();
 
   var h='<div class="bar"><h2>'+(isToday?'Today':nice(date))+'</h2>'+
-    '<input type="date" id="tdDate" value="'+date+'" style="width:auto">'+
+    dayStepper('tdDate',date)+
     (isToday?'':'<button class="btn sm" id="tdNow">Back to today</button>')+'</div>';
 
   // headline
@@ -771,7 +803,7 @@ VIEWS.today=function(el){
     h+='<div class="stats">'+
       '<div class="stat"><b class="num">'+fmt(e.bags)+'</b><span>bags so far</span></div>'+
       '<div class="stat"><b class="num">'+fmt(e.binsSoFar,1)+'</b><span>bins so far</span></div>'+
-      '<div class="stat est"><b class="num">'+(e.endBins!=null?fmt(e.endBins,0):'–')+'</b><span>'+(e.state==='live'?'est. bins by '+minToHm(dayEnd()):'bins for the day')+'</span></div></div>';
+      '<div class="stat est"><b class="num">'+(e.endBins!=null?fmt(e.endBins,0):'–')+'</b><span>'+(e.isToday?'est. bins by '+minToHm(dayEnd()):'bins for the day')+'</span></div></div>';
     h+='<div class="small mute" style="margin-top:10px">';
     if (e.state==='early') h+='Started '+minToHm(e.startM)+'. Estimate shows after 20 minutes of picking.';
     else h+='Started '+minToHm(e.startM)+' · '+fmt(e.ratePerHour)+' bags an hour ('+fmt(e.perPickerHour,1)+' per picker)'+(e.state==='live'?' · '+fmt(e.remaining/60,1)+' picking hours left':'');
@@ -787,14 +819,15 @@ VIEWS.today=function(el){
   var max=pds.length?bagsOf(pds[0]):1;
   function rows(list,startRank){ return list.map(function(p,i){ var w=workerOr(p.workerId);
     return '<div class="list-row click" data-w="'+p.workerId+'"><span class="rank">'+(startRank+i)+'</span><div style="min-width:120px;flex:1.2"><b>'+esc(wName(w))+'</b> <span class="mute small">#'+w.no+' · '+esc(teamName(p.team))+'</span></div><div class="barw hide-m"><i style="width:'+(bagsOf(p)/max*100)+'%"></i></div><b class="num" style="width:44px;text-align:right">'+bagsOf(p)+'</b></div>'; }).join(''); }
-  h+='<div class="grid g2">';
-  h+='<div class="card"><h3>Top 5 pickers</h3>'+(pds.length?rows(pds.slice(0,5),1):'<div class="empty">No bags yet.</div>')+'</div>';
-  h+='<div class="card"><h3>Bottom 5 pickers</h3>'+(pds.length>5?rows(pds.slice(-5).reverse().reverse(),pds.length-4):'<div class="empty">Not enough pickers yet.</div>')+
-     '<div class="small mute" style="margin-top:8px">Pair these with a strong picker. <a href="#pickers">All pickers</a></div></div>';
-  h+='</div>';
-  if (hasScans){
-    var hb=[]; for (var x=6;x<=16;x++) hb.push({label:x+':00',short:pad(x)+'h',v:hours[x]||0,faded:!inSession(x*60+30)});
-    h+='<div class="card chart"><h3>Bags per hour</h3>'+barChart(hb)+'<div class="small mute" style="margin-top:4px">Faded bars are breakfast and lunch.</div></div>';
+  if (!pds.length) h+='<div class="card empty-card"><b>No bags yet'+(isToday?' today':' on this day')+'.</b><div class="small mute">The top and bottom pickers and the bags per hour appear after the first bags are scanned.</div></div>';
+  else {
+    h+='<div class="grid g-rank">';
+    h+='<div class="card"><h3>Top 5 pickers</h3>'+rows(pds.slice(0,5),1)+'</div>';
+    h+='<div class="card"><h3>Bottom 5 pickers</h3>'+(pds.length>5?rows(pds.slice(-5),pds.length-4):'<div class="empty">Shows once more than 5 pickers have bags.</div>')+
+       '<div class="small mute" style="margin-top:8px">Pair these with a strong picker. <a href="#pickers">All pickers</a></div></div>';
+    if (hasScans){ var hb=[]; for (var x=6;x<=16;x++) hb.push({label:x+':00',short:pad(x)+'h',v:hours[x]||0,faded:!inSession(x*60+30)});
+      h+='<div class="card chart"><h3>Bags per hour</h3>'+barChart(hb)+'<div class="small mute" style="margin-top:4px">Faded bars are breakfast and lunch.</div></div>'; }
+    h+='</div>';
   }
   // needs attention
   var attn=[];
@@ -809,7 +842,7 @@ VIEWS.today=function(el){
   if (una) attn.push(una+' taps from bands that are not given to anyone. Check who is wearing them.');
   if (attn.length) h+='<div class="card"><h3>Needs attention</h3>'+attn.map(function(a){return '<div class="list-row">'+a+'</div>';}).join('')+'</div>';
   el.innerHTML=h;
-  $('tdDate').onchange=function(){ VIEW.todayDate=this.value||null; route(); };
+  bindStepper(el,'tdDate',date,function(d){ VIEW.todayDate=d; });
   if ($('tdNow')) $('tdNow').onclick=function(){ VIEW.todayDate=null; route(); };
   el.querySelectorAll('[data-w]').forEach(function(r){ r.onclick=function(){ pickerModal(r.getAttribute('data-w')); }; });
 };
@@ -849,11 +882,11 @@ function pickerModal(wid){
   var tot=pds.reduce(function(a,p){return a+bagsOf(p);},0);
   var h='<h2>'+esc(wName(w))+' <span class="mute">#'+w.no+'</span></h2><div class="small mute" style="margin:4px 0 12px">'+esc(teamName(w.team))+' · '+(w.pay==='day'?'Day worker, paid per bag':'Contract worker, performance only')+' · band '+w.no+(hasChip(w.no)?'':' (no chip linked yet)')+(w.active?'':' · has left')+'</div>'+
     '<div class="stats" style="margin-bottom:12px"><div class="stat"><b>'+fmt(tot)+'</b><span>bags this season</span></div><div class="stat"><b>'+pds.length+'</b><span>days picked</span></div><div class="stat"><b>'+(pds.length?fmt(tot/pds.length):0)+'</b><span>average a day</span></div></div>'+
-    '<table><thead><tr><th>Day</th><th>Block</th><th class="r">Scanned</th><th class="r">Correction</th><th class="r">Bags</th></tr></thead><tbody>'+
-    pds.map(function(p){ var b=blockById(p.block); return '<tr><td>'+nice(p.date)+'</td><td>'+(b?esc(b.name):'')+'</td><td class="r num">'+(p.bags||0)+(p.manual?' <span class="tiny mute">('+p.manual+' typed)</span>':'')+'</td><td class="r num">'+(p.adj?(p.adj>0?'+':'')+p.adj+(p.adjWhy?' <span class="tiny mute" title="'+esc(p.adjWhy)+'">ⓘ</span>':''):'')+'</td><td class="r num"><b>'+bagsOf(p)+'</b></td></tr>'; }).join('')+
+    '<table><thead><tr><th>Day</th><th class="r">Scanned</th><th class="r">Correction</th><th class="r">Bags</th></tr></thead><tbody>'+
+    pds.map(function(p){ var b=blockById(p.block); return '<tr><td class="nowrap">'+nice(p.date)+(b?'<div class="tiny mute">'+esc(b.name)+'</div>':'')+'</td><td class="r num">'+(p.bags||0)+(p.manual?' <span class="tiny mute">('+p.manual+' typed)</span>':'')+'</td><td class="r num">'+(p.adj?(p.adj>0?'+':'')+p.adj+(p.adjWhy?' <span class="tiny mute" title="'+esc(p.adjWhy)+'">ⓘ</span>':''):'')+'</td><td class="r num"><b>'+bagsOf(p)+'</b></td></tr>'; }).join('')+
     '</tbody></table>'+
     '<div class="card" style="margin-top:14px;background:var(--soft);box-shadow:none"><h3>Correct a count or add bags from paper</h3><div class="fr">'+
-    '<div><label class="f">Day</label><input type="date" id="cDate" value="'+today+'"></div><div><label class="f">Bags to add (use minus to remove)</label><input type="number" id="cN" placeholder="e.g. 12 or -2"></div></div>'+
+    '<div><label class="f">Day: <span id="cDateNice" style="color:var(--ink)">'+nice(today)+'</span></label><input type="date" id="cDate" value="'+today+'"></div><div><label class="f">Bags to add (use minus to remove)</label><input type="number" id="cN" placeholder="e.g. 12 or -2"></div></div>'+
     '<label class="f">Reason (kept in the change log)</label><input type="text" id="cWhy" placeholder="e.g. Phone flat after lunch, from QC paper">'+
     '<div class="acts"><button class="btn p" data-a="fix">Save correction</button></div></div>'+
     '<div class="acts"><button class="btn" data-a="close">Close</button></div>';
@@ -873,6 +906,7 @@ function pickerModal(wid){
     Store.log(ME.name,'Corrected '+wName(w)+' #'+w.no+' on '+d+' by '+(n>0?'+':'')+n+' bags: '+why);
     toast('Saved'); pickerModal(wid);
   }});
+  $('cDate').onchange=function(){ $('cDateNice').textContent=this.value?nice(this.value):''; };
 }
 
 /* ---------------- BINS ---------------- */
@@ -884,7 +918,7 @@ VIEWS.bins=function(el){
   if (!show.length) show=[VARIETIES[0]];
   var est=st.teams.map(function(t){return teamEstimate(date,t.id);});
   var estBins=est.reduce(function(a,e){return a+e.binsSoFar;},0);
-  var h='<div class="bar"><h2>Bins</h2><input type="date" id="bDate" value="'+date+'" style="width:auto"></div>';
+  var h='<div class="bar"><h2>Bins</h2>'+dayStepper('bDate',date)+'</div>';
   h+='<div class="card"><h3>'+nice(date)+': bins on the whiteboard</h3><div class="small mute" style="margin-bottom:8px">Enter at the end of the day. Export = plastic bins, juice = wooden bins.</div><div class="tw"><table><thead><tr><th>Variety</th><th class="r">Export</th><th class="r">Juice</th><th class="r">Total</th></tr></thead><tbody>';
   show.forEach(function(v){ var r=Store.get('bins',date+'|'+v.code)||{export:'',juice:''};
     h+='<tr><td><b>'+esc(vShort(v.code))+'</b></td><td class="r"><input class="cell" type="number" min="0" inputmode="numeric" data-v="'+v.code+'" data-k="export" value="'+r.export+'"></td><td class="r"><input class="cell" type="number" min="0" inputmode="numeric" data-v="'+v.code+'" data-k="juice" value="'+r.juice+'"></td><td class="r num"><b>'+((+r.export||0)+(+r.juice||0)||'')+'</b></td></tr>'; });
@@ -906,14 +940,14 @@ VIEWS.bins=function(el){
     var ve=0,vj=0;
     body+='<tr class="grp"><td colspan="6"><b>'+esc(vShort(v.code))+'</b> <span class="mute small">· '+rows.length+' picking day'+(rows.length>1?'s':'')+'</span></td></tr>';
     rows.forEach(function(b){ ve+=b.export; vj+=b.juice; var fb=fromBags(b.date,v.code);
-      body+='<tr class="click" data-d="'+b.date+'"><td>'+nice(b.date)+'</td><td class="r num">'+b.export+'</td><td class="r num">'+b.juice+'</td><td class="r num"><b>'+(b.export+b.juice)+'</b></td><td class="r num">'+pct(b.export,b.export+b.juice)+'%</td><td class="r num mute hide-m">'+(fb?fmt(fb,1):'')+'</td></tr>'; });
+      body+='<tr class="click" data-d="'+b.date+'"><td class="nowrap">'+nice(b.date)+'</td><td class="r num">'+b.export+'</td><td class="r num">'+b.juice+'</td><td class="r num"><b>'+(b.export+b.juice)+'</b></td><td class="r num">'+pct(b.export,b.export+b.juice)+'%</td><td class="r num mute hide-m">'+(fb?fmt(fb,1):'')+'</td></tr>'; });
     body+='<tr class="sub"><td>'+esc(vShort(v.code))+' total</td><td class="r num">'+fmt(ve)+'</td><td class="r num">'+fmt(vj)+'</td><td class="r num">'+fmt(ve+vj)+'</td><td class="r num">'+pct(ve,ve+vj)+'%</td><td class="hide-m"></td></tr>';
   });
   h+='<div class="card"><h3>This season</h3><div class="small mute" style="margin-bottom:6px">'+fmt(se+sj)+' bins: '+fmt(se)+' export ('+pct(se,se+sj)+'%) and '+fmt(sj)+' juice. Tap a day to open it.</div><div class="tw"><table><thead><tr><th>Day</th><th class="r">Export</th><th class="r">Juice</th><th class="r">Total</th><th class="r">Export %</th><th class="r hide-m">From bags</th></tr></thead><tbody>'+
     (body||'<tr><td colspan="6" class="empty">No bins entered yet this season.</td></tr>')+
     '<tr class="tot"><td>Season</td><td class="r num">'+fmt(se)+'</td><td class="r num">'+fmt(sj)+'</td><td class="r num">'+fmt(se+sj)+'</td><td class="r num">'+pct(se,se+sj)+'%</td><td class="hide-m"></td></tr></tbody></table></div></div>';
   el.innerHTML=h;
-  $('bDate').onchange=function(){ VIEW.binDate=this.value||null; VIEW.binExtra=null; route(); };
+  bindStepper(el,'bDate',date,function(d){ VIEW.binDate=d; VIEW.binExtra=null; });
   if ($('bAdd')) $('bAdd').onchange=function(){ VIEW.binExtra=this.value; route(); };
   el.querySelectorAll('input.cell').forEach(function(inp){ inp.onchange=function(){
     var v=inp.getAttribute('data-v'), k=inp.getAttribute('data-k'), id=date+'|'+v;
@@ -935,17 +969,17 @@ VIEWS.pay=function(el){
     .filter(function(r){ return r.bags || r.loan || (ws===cur && r.w.active); });   // finished weeks: only people with bags or a loan
   var T={bags:0,gross:0,loan:0,net:0}; rows.forEach(function(r){ T.bags+=r.bags; T.gross+=r.gross; T.loan+=r.loan; T.net+=r.net; });
   var weeks=[]; for (var i=0;i<8;i++) weeks.push(addDays(cur,-7*i));
-  var h='<div class="bar"><h2>Pay</h2><select id="payW" style="width:auto">'+weeks.map(function(w){ return '<option value="'+w+'"'+(w===ws?' selected':'')+'>'+niceShort(w)+' to '+niceShort(addDays(w,6))+(w===cur?' (this week)':'')+(Store.get('paidWeeks',w)?' · paid':'')+'</option>'; }).join('')+'</select>'+
-    '<button class="btn" id="payX">Excel</button><button class="btn hide-m" onclick="window.print()">Print</button></div>';
-  h+='<div class="grid g4">'+
-    '<div class="card kpi hero"><div class="lbl">Cash needed</div><div class="val num" style="white-space:nowrap">'+Rk(T.net)+'</div><div class="sub">Payday '+nice(payday(ws))+'</div></div>'+
+  var h='<div class="bar"><h2>Pay</h2><div class="weekpick"><select id="payW" aria-label="Pay week">'+weeks.map(function(w){ var a=parseYmd(w), z=parseYmd(addDays(w,6)); return '<option value="'+w+'"'+(w===ws?' selected':'')+'>'+a.getDate()+(a.getMonth()!==z.getMonth()?' '+MON[a.getMonth()]:'')+' to '+z.getDate()+' '+MON[z.getMonth()]+(w===cur?' (this week)':'')+(Store.get('paidWeeks',w)?' · paid':'')+'</option>'; }).join('')+'</select>'+
+    '<button class="btn icon" id="payX" aria-label="Download Excel" title="Download Excel"><svg viewBox="0 0 24 24"><path d="M12 3v12M7 10l5 5 5-5M4 20h16"/></svg><span class="hide-m">Excel</span></button><button class="btn hide-m" onclick="window.print()">Print</button></div></div>';
+  var nPick=rows.filter(function(r){return r.loan;}).length;
+  var status = locked ? '<div class="paystat ok">✓ All paid · '+esc(paid.by)+', '+(function(d){return d.getDate()+' '+MON[d.getMonth()]+' '+hm(paid.paidAt);})(new Date(paid.paidAt))+'</div>'
+    : ws===cur ? '<div class="paystat">Week still running · ends '+nice(addDays(ws,6))+'</div>'
+    : '<div class="paystat">Not paid yet</div><button class="btn light no-print" id="markPaid">Mark as paid</button>';
+  h+='<div class="grid g3 paygrid">'+
+    '<div class="card kpi hero"><div class="lbl">Cash needed</div><div class="val num" style="white-space:nowrap">'+Rk(T.net)+'</div><div class="sub">Payday '+nice(payday(ws))+'</div>'+status+'</div>'+
     '<div class="card kpi"><div class="lbl">Bags</div><div class="val num">'+fmt(T.bags)+'</div><div class="sub">× '+R(st.ratePerBag)+' = '+R(T.gross)+'</div></div>'+
-    '<div class="card kpi"><div class="lbl">Loans deducted</div><div class="val num">'+Rk(T.loan)+'</div><div class="sub">'+rows.filter(function(r){return r.loan;}).length+' pickers</div></div>'+
-    '<div class="card kpi"><div class="lbl">Status</div>'+
-      (locked ? '<div class="val" style="font-size:22px;margin-top:8px;color:var(--green)">✓ All paid</div><div class="sub">'+esc(paid.by)+', '+(function(d){return d.getDate()+' '+MON[d.getMonth()]+' '+hm(paid.paidAt);})(new Date(paid.paidAt))+'</div>'
-       : ws===cur ? '<div class="val" style="font-size:20px;margin-top:8px">Week still running</div><div class="sub">Ends '+nice(addDays(ws,6))+'. Pay on '+nice(payday(ws))+'.</div>'
-       : '<div class="val" style="font-size:20px;margin-top:8px">Not paid yet</div><button class="btn p no-print" id="markPaid" style="margin-top:8px;width:100%">Mark as paid</button>')+
-    '</div></div>';
+    '<div class="card kpi"><div class="lbl">Loans deducted</div><div class="val num">'+Rk(T.loan)+'</div><div class="sub">'+nPick+' picker'+(nPick===1?'':'s')+'</div></div>'+
+    '</div>';
   if (locked && paid.rows){ var diffs=[]; rows.forEach(function(r){ var sn=paid.rows[r.w.id]; var was=sn?sn.bags:0; if (r.bags!==was) diffs.push(esc(wName(r.w))+' #'+r.w.no+': paid for '+was+' bags, now '+r.bags); });
     Object.keys(paid.rows).forEach(function(id){ if (!rows.some(function(r){return r.w.id===id;}) && paid.rows[id].bags){ var w=worker(id); diffs.push(esc(w?wName(w):id)+': paid for '+paid.rows[id].bags+' bags, now 0'); } });
     if (diffs.length) h+='<div class="note" style="background:var(--red-s);border-color:#f3c7c1;color:#7a1d14"><b>Changed after this week was paid</b> (for example a phone that sent bags late). Settle the difference next payday:<br>'+diffs.join('<br>')+'</div>'; }
@@ -1037,9 +1071,9 @@ VIEWS.orchards=function(el){
   var years=[]; Store.all('bloom').forEach(function(b){ if (years.indexOf(b.year)<0) years.push(b.year); }); years.sort().reverse();
   var h='<div class="bar"><h2>Orchards</h2></div>';
   if (!blocks.length) h+='<div class="note b">No blocks yet. <button class="btn sm p" id="loadRef">Load the Sandrivier blocks and bloom dates</button> (Block Master and Fanus\'s bloom sheets 2020 to 2026)</div>';
-  h+='<div class="card"><h3>Blocks</h3><div class="small mute" style="margin-bottom:6px">From the block master. Tap a block to edit. Rows per block still to fill in.</div><div class="tw"><table><thead><tr><th>Block</th><th>Variety</th><th class="r">Trees</th><th class="r">Ha</th><th class="r">Rows</th><th class="hide-m">Planted</th><th class="hide-m">Spacing</th><th>Soil</th><th class="hide-m">Ridged</th></tr></thead><tbody>'+
-    blocks.map(function(b){ return '<tr class="click" data-b="'+b.id+'"><td><b>'+esc(b.name)+'</b></td><td>'+esc(vShort(b.variety))+'</td><td class="r num">'+fmt(b.trees)+'</td><td class="r num">'+b.ha+'</td><td class="r num">'+(b.rows||'<span class="mute">–</span>')+'</td><td class="hide-m">'+esc(b.planted)+'</td><td class="hide-m">'+esc(b.spacing)+'</td><td>'+esc(b.soil)+'</td><td class="hide-m">'+esc(b.ridged)+'</td></tr>'; }).join('')+
-    '<tr class="tot"><td>Farm</td><td></td><td class="r num">'+fmt(blocks.reduce(function(a,b){return a+(+b.trees||0);},0))+'</td><td class="r num">'+blocks.reduce(function(a,b){return a+(+b.ha||0);},0)+'</td><td></td><td class="hide-m"></td><td class="hide-m"></td><td></td><td class="hide-m"></td></tr></tbody></table></div>'+
+  h+='<div class="card"><h3>Blocks</h3><div class="small mute" style="margin-bottom:6px">From the block master. Tap a block to edit. Rows per block still to fill in.</div><div class="tw"><table><thead><tr><th>Block</th><th>Variety</th><th class="r">Trees</th><th class="r">Ha</th><th class="r hide-m">Rows</th><th class="hide-m">Planted</th><th class="hide-m">Spacing</th><th>Soil</th><th class="hide-m">Ridged</th></tr></thead><tbody>'+
+    blocks.map(function(b){ return '<tr class="click" data-b="'+b.id+'"><td class="nowrap"><b><span class="hide-m">'+esc(b.name)+'</span><span class="show-m">'+esc(b.name.replace(/^Blok\s*/,'B'))+'</span></b></td><td>'+esc(vShort(b.variety))+'</td><td class="r num">'+fmt(b.trees)+'</td><td class="r num">'+b.ha+'</td><td class="r num hide-m">'+(b.rows||'<span class="mute">–</span>')+'</td><td class="hide-m">'+esc(b.planted)+'</td><td class="hide-m">'+esc(b.spacing)+'</td><td>'+esc(b.soil)+'</td><td class="hide-m">'+esc(b.ridged)+'</td></tr>'; }).join('')+
+    '<tr class="tot"><td>Farm</td><td></td><td class="r num">'+fmt(blocks.reduce(function(a,b){return a+(+b.trees||0);},0))+'</td><td class="r num">'+blocks.reduce(function(a,b){return a+(+b.ha||0);},0)+'</td><td class="hide-m"></td><td class="hide-m"></td><td class="hide-m"></td><td></td><td class="hide-m"></td></tr></tbody></table></div>'+
     '<div style="margin-top:10px"><button class="btn sm" id="addBlock">+ Add block</button></div></div>';
   h+='<div class="card"><div class="bar" style="margin-bottom:6px"><h3 style="margin:0;margin-right:auto">Full bloom dates</h3><button class="btn sm" id="addYear">+ Add year</button></div><div class="small mute" style="margin-bottom:6px">Bloom in spring, harvest the following summer. Tap a date to change it.</div><div class="tw"><table><thead><tr><th>Bloom year</th>'+
     blocks.map(function(b){ return '<th class="r">'+esc(b.name.replace('Blok ','B'))+'<br><span class="tiny">'+esc(b.variety)+'</span></th>'; }).join('')+'</tr></thead><tbody>'+
@@ -1108,8 +1142,9 @@ VIEWS.settings=function(el){
   h+='<div class="card"><div class="bar" style="margin-bottom:8px"><h3 style="margin:0;margin-right:auto">Workers</h3><input type="search" id="wQ" placeholder="Search" value="'+esc(VIEW.wQ||'')+'" style="max-width:200px"><button class="btn" id="bulkW">Paste a list</button><button class="btn p" id="addW">+ Add worker</button></div>'+
     (unlinked?'<div class="note">'+unlinked+' active picker'+(unlinked>1?'s wear':' wears')+' a band number with no chip linked yet. Link the bands below.</div>':'')+
     '<div class="tw"><table><thead><tr><th>#</th><th>Name</th><th>Work</th><th class="hide-m">Paid</th><th class="hide-m">Team</th><th>Band</th><th class="hide-m">Last picked</th><th class="hide-m">Status</th></tr></thead><tbody>'+
+    (ws.length?'':'<tr><td colspan="8" class="empty">'+(q?'No worker matches “'+esc(VIEW.wQ)+'”.':'No workers yet. Use <b>Paste a list</b> for Fanus\'s list, or <b>+ Add worker</b>.')+'</td></tr>')+
     ws.map(function(w){ return '<tr class="click" data-w="'+w.id+'"'+(w.active?'':' style="opacity:.5"')+'><td class="num">'+w.no+'</td><td><b>'+esc(wName(w))+'</b></td><td>'+(w.role==='picker'?'Picker':'Sorter')+'</td><td class="hide-m">'+(w.pay==='day'?'Day':'Contract')+'</td><td class="hide-m">'+esc(teamName(w.team))+'</td><td>'+(w.role!=='picker'?'<span class="mute small">n/a</span>':!w.active?'<span class="mute small">returned</span>':hasChip(w.no)?'<span class="tag g">Linked</span>':'<span class="tag a">No chip</span>')+'</td><td class="hide-m small">'+(function(d){return d?niceShort(d):'';})(lastPicked(w.id))+'</td><td class="hide-m">'+(w.active?'Active':'Left')+'</td></tr>'; }).join('')+
-    '</tbody></table></div><label class="small" style="display:inline-flex;gap:6px;align-items:center;margin-top:10px"><input type="checkbox" id="wAll"'+(showAll?' checked':'')+'> Show workers who have left</label></div>';
+    '</tbody></table></div><label class="small tapcheck"><input type="checkbox" id="wAll"'+(showAll?' checked':'')+'> Show workers who have left</label></div>';
   // bands
   var bmax=maxBand(), nLinked=0, nWorn=0, cells='';
   for (var bn=1; bn<=bmax; bn++){ var ch=hasChip(bn), wr=wearer(bn); if (ch) nLinked++; if (wr) nWorn++;
@@ -1308,13 +1343,17 @@ var Scanner=(function(){
     close('ovDay'); head(); start(); };       // this tap also switches on band reading
   // keypad
   $('keys').innerHTML=['1','2','3','4','5','6','7','8','9','⌫','0','C'].map(function(x){return '<button data-k="'+x+'">'+x+'</button>';}).join('');
-  $('keys').onclick=function(e){ var x=e.target.getAttribute('data-k'); if (!x) return; if (x==='⌫') kp=kp.slice(0,-1); else if (x==='C') kp=''; else if (kp.length<4) kp+=x; $('kpd').textContent=kp; };
-  $('scManual').onclick=function(){ kp=''; $('kpd').textContent=''; $('kMsg').textContent=''; open('ovKey'); };
+  function kpWorker(){ return kp ? Store.where('workers',function(x){return x.active && x.role==='picker' && String(x.no)===kp;})[0] : null; }
+  function kpShow(){ $('kpd').textContent=kp; var w=kpWorker(), el=$('kWho');
+    el.textContent = !kp ? 'Type the number on the band' : w ? wName(w) : 'Number '+kp+' is not on the list';
+    el.className='kwho'+(w?' ok':kp?' bad':''); $('kOk').disabled=!w; }
+  $('keys').onclick=function(e){ var x=e.target.getAttribute('data-k'); if (!x) return; if (x==='⌫') kp=kp.slice(0,-1); else if (x==='C') kp=''; else if (kp.length<4) kp+=x; kpShow(); };
+  $('scManual').onclick=function(){ kp=''; kpShow(); $('kMsg').textContent=''; open('ovKey'); };
   $('kDone').onclick=function(){ close('ovKey'); idle(); };
-  $('kOk').onclick=function(){ var w=Store.where('workers',function(x){return x.active && x.role==='picker' && String(x.no)===kp;})[0], m=$('kMsg');
+  $('kOk').onclick=function(){ var w=kpWorker(), m=$('kMsg');
     if (!w){ fb('bad'); m.style.color='#f87171'; m.textContent='Number '+(kp||'?')+' is not on the list'; }
     else { var s=count(w,'MANUAL'); m.style.color=s==='OK'?'#4ade80':'#fbbf24'; m.textContent=(s==='OK'?'Counted: ':'NOT counted (too soon): ')+wName(w)+' #'+w.no+', '+bagsOf(pdFor(TODAY(),w.id))+' bags today'; }
-    kp=''; $('kpd').textContent=''; };
+    kp=''; kpShow(); };
   // link band
   $('lCancel').onclick=function(){ close('ovLink'); idle(); };
   function link(replace){ var no=parseInt($('lNo').value,10);
