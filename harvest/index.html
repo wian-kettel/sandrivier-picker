@@ -367,7 +367,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.5.4';
+var APP_VERSION = '1.6.0';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -409,7 +409,7 @@ function TODAY(){ return ymd(NOW()); }
    ===================================================================== */
 var Store = (function(){
   var queued=false, fb=null, db=null, mem={}, ready={}, subs=[], listeners=[], pending=0, failed=0, lastErr='';
-  var COLS=['settings','workers','bands','blocks','bloom','teamDays','pickerDays','bins','loans','attendance','paidWeeks','audit','users','dayFlags'];
+  var COLS=['settings','workers','bands','blocks','bloom','teamDays','pickerDays','bins','loans','attendance','paidWeeks','audit','users','dayFlags','devices'];
   COLS.forEach(function(c){ mem[c]={}; });
   function clean(o){ var x={}; for (var k in o) if (k!=='id' && o[k]!==undefined) x[k]=o[k]; return x; }
   function notify(col){ listeners.forEach(function(f){ f(col); }); }
@@ -428,6 +428,7 @@ var Store = (function(){
       if (!snap.metadata.fromCache || !navigator.onLine) ready[col]=true;
       notify(col);
     }, function(e){ console.warn('listen '+col, e.code); lastErr=e.code||'';
+      if (col==='devices') ready[col]=true;   // phone battery is extra: never hold up the app for it
       // access can arrive a moment after sign-in: try again a few times
       if (tries<5) setTimeout(function(){ if (subs.indexOf(u)>=0){ subs.splice(subs.indexOf(u),1); subscribe(col,q,tries+1); } }, 1500*(tries+1));
       else { ready[col]=true; notify(col); } });
@@ -454,7 +455,7 @@ var Store = (function(){
       }
       subscribe('teamDays', query(collection(db,'teamDays'), where('date','>=',from)));
       subscribe('pickerDays', query(collection(db,'pickerDays'), where('date','>=',from)));
-      ['bloom','bins','loans','attendance','paidWeeks','dayFlags'].forEach(function(c){ subscribe(c, collection(db,c)); });
+      ['bloom','bins','loans','attendance','paidWeeks','dayFlags','devices'].forEach(function(c){ subscribe(c, collection(db,c)); });
       subscribe('audit', query(collection(db,'audit'), orderBy('t','desc'), limit(150)));
       if (role==='admin') subscribe('users', collection(db,'users'));
     },
@@ -539,6 +540,17 @@ function tbSum(pd){ var n=0; if (pd && pd.tb) for (var k in pd.tb) n+=pd.tb[k]||
 function bagsForTeam(pd,team){ if (!pd) return 0; return ((pd.tb && pd.tb[team])||0) + (pd.team===team ? bagsOf(pd)-tbSum(pd) : 0); }
 function teamsOf(pd){ var t=[]; if (!pd) return t; (S().teams||[]).forEach(function(x){ if (bagsForTeam(pd,x.id)>0) t.push(x.id); }); if (!t.length && pd.team) t.push(pd.team); return t; }
 function firstForTeam(pd,team){ return (pd.tf && pd.tf[team]) || (pd.team===team ? pd.first : null); }
+
+// the FORT 1 of a team: battery and when it last reported (phones report every 5 minutes while the scanner is open)
+function phoneLine(team, isToday){
+  if (!isToday) return '';
+  var d=Store.where('devices',function(x){ return x.team===team; }).sort(function(a,b){ return (b.at||0)-(a.at||0); })[0];
+  if (!d || !d.at || new Date(d.at).toDateString()!==NOW().toDateString()) return '<div class="small mute" style="margin:-2px 0 8px">Phone not switched on today.</div>';
+  var mins=Math.max(0,Math.round((NOW().getTime()-d.at)/60000)), stale=mins>15, low=d.level<20 && !d.charging;
+  var col = low ? '#b91c1c' : stale ? 'var(--amber-t)' : 'var(--mute)';
+  return '<div class="small" style="margin:-2px 0 8px;color:'+col+'">Phone battery <b>'+d.level+'%</b>'+(d.charging?' (charging)':'')+(low?', charge soon':'')+
+    ' · '+(mins<2?'just now':mins<60?mins+' min ago':hm(d.at))+(stale?', not heard from since':'')+'</div>';
+}
 
 // estimate for one team on one date
 function teamEstimate(date, team){
@@ -808,6 +820,7 @@ VIEWS.today=function(el){
     h+='<div class="card"><div class="team-head"><h3>'+esc(teamName(e.team))+'</h3>'+
       (bl?'<span class="tag">'+esc(bl.name)+'</span><span class="tag g">'+esc(vShort(bl.variety))+'</span>':(e.bags?'<span class="tag a">Block not chosen</span>':'<span class="tag a">Not started</span>'))+
       (e.pickers?'<span class="tag b">'+e.pickers+' picker'+(e.pickers>1?'s':'')+(e.state==='live'?' picking':'')+'</span>':'')+'</div>';
+    h+=phoneLine(e.team, e.isToday);
     if (e.state==='none'){ h+='<div class="mute">No bags scanned yet.</div></div>'; return; }
     if (e.away) h+='<div class="small" style="color:var(--amber-t);margin:-2px 0 8px">'+e.away+' picker'+(e.away>1?'s':'')+' from the other team counted on this phone.</div>';
     h+='<div class="stats">'+
@@ -1427,9 +1440,12 @@ var Scanner=(function(){
     var w=ws[Math.floor(Math.random()*ws.length)]; if (w) onBand(bandFor(w.no).uid); };
   // keep the day right if the phone stays on overnight
   setInterval(function(){ if (!$('scan').classList.contains('on')) return; if (scanning) keepAwake(); if (dayOpen && dayOpen!==TODAY()){ dayOpen=TODAY(); Store.start(ME.role==='scanner'?'scanner':ME.role); block=null; whenReady(function(){ head(); askBlock(); }); } battery(); }, 60000);
-  var dayOpen=null;
+  var dayOpen=null, lastReport=null;
   function battery(){ if (!navigator.getBattery) return; navigator.getBattery().then(function(b){ var l=Math.round(b.level*100), bl=[]; try{ bl=JSON.parse(localStorage.getItem('ht-batlog')||'[]'); }catch(e){}
     var now=Date.now(); if (b.charging) bl=[]; else if (!bl.length || now-bl[bl.length-1].t>=15*60000) bl.push({t:now,l:l}); try{ localStorage.setItem('ht-batlog',JSON.stringify(bl.slice(-80))); }catch(e){}
+    if (ME.role==='scanner'){ var lr=lastReport, nowT=Date.now();
+      if (!lr || nowT-lr.t>=5*60000 || lr.c!==!!b.charging || lr.team!==team){ lastReport={t:nowT,c:!!b.charging,team:team};
+        Store.put('devices',{id:ME.uid, team:team, name:ME.name, level:l, charging:!!b.charging, at:nowT, v:APP_VERSION}); } }
     $('scBatt').textContent=l+'%'+(b.charging?' charging':''); $('scBatt').style.color = l<20&&!b.charging ? '#f87171' : ''; }); }
   window.battInfo=function(){ var bl=[]; try{ bl=JSON.parse(localStorage.getItem('ht-batlog')||'[]'); }catch(e){} if (bl.length<3) return 'Battery: needs 30 minutes off the charger to estimate.';
     var hrs=(bl[bl.length-1].t-bl[0].t)/3600000, used=bl[0].l-bl[bl.length-1].l; if (hrs<0.5||used<=0) return 'Battery: needs 30 minutes off the charger to estimate.';

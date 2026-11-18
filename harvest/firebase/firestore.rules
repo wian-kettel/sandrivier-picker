@@ -68,6 +68,8 @@ service cloud.firestore {
     match /scans/{id}    { allow create: if staff(); allow read: if office(); }
     match /dayFlags/{id} { allow read: if office(); allow write: if staff(); }
 
+    // each FORT 1 reports its battery every few minutes, under its own login id
+    match /devices/{id}    { allow read: if office(); allow write: if office() || (scanner() && request.auth.uid == id); }
     match /bins/{id}       { allow read, write: if office(); }
     match /attendance/{id} { allow read, write: if office(); }
     match /paidWeeks/{id}  { allow read, write: if office(); }
