@@ -369,7 +369,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.7.1';
+var APP_VERSION = '1.7.2';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -1111,7 +1111,8 @@ var EST_READ=[['r1','First reading'],['r2','Second reading'],['final','Final rea
 var EST_DAYS={EBC:10,PTR:10,FRL:6};                     // planned picking days until Fanus changes them
 // Fanus's Oesskatting 2027 spreadsheet: branches per tree, fruit per branch, fruit weight (g), export %
 var EST_FANUS={'1':[24,18,180,70],'2':[26,9,180,70],'4':[20,12,180,70],'5':[20,10,180,70],'3':[23,11,160,70],'6':[23,9,160,70],'7':[22,6,145,85],
-  '8a':[22,6,145,85,2323,1.5],'8b':[18,4,145,85,2119,1.5]};
+  '8a':[22,6,145,85],'8b':[18,4,145,85]};
+var EST_PARTS={'8':{'8a':[2323,1.5],'8b':[2119,1.5]}};   // trees and hectares of each part, from Fanus's sheet
 function kgE(d){ return (d&&d.kgE) || S().kgExport || 470; }
 function kgJ(d){ return (d&&d.kgJ) || S().kgJuice || 445; }
 function estGet(kind){ return Store.get('estimates', S().season+'|'+kind); }
@@ -1122,11 +1123,18 @@ function lastSeason(code){ var ys=Object.keys(HIST).filter(function(y){ return y
   (HIST[y]||[]).forEach(function(r){ if (r[1]!==code) return; e+=r[2]; j+=r[3]; if (r[2]+r[3]>0) days[r[0]]=1; });
   return {year:y, exp:e, juice:j, bins:e+j, days:Object.keys(days).length, tons:(e*kgE()+j*kgJ())/1000}; }
 // the working estimate, with a row for every block (a block that was split has its parts instead)
-function estDraft(){ var w=estGet('work'), d={id:S().season+'|work', season:S().season, kind:'work', rows:{}, vars:{}};
+// Quick edits one after another: the copy coming back from Firebase can be one edit behind for a moment,
+// so the newest copy saved on this device wins until Firebase has caught up.
+var EST_LOCAL=null;
+function estDraft(){ var w=estGet('work'); if (EST_LOCAL && EST_LOCAL.season===S().season && (!w || (w.at||0)<=EST_LOCAL.at)) w=EST_LOCAL;
+  var d={id:S().season+'|work', season:S().season, kind:'work', rows:{}, vars:{}};
   if (w){ d.rows=JSON.parse(JSON.stringify(w.rows||{})); d.vars=JSON.parse(JSON.stringify(w.vars||{})); }
+  // rows follow Fanus's sheet: one row per block, except Blok 8 which is always 8a and 8b
   Store.all('blocks').forEach(function(b){ if (EST_VARS.indexOf(b.variety)<0) return;
-    var has=false; for (var k in d.rows) if (d.rows[k].block===b.id) has=true;
-    if (!has) d.rows[b.id]={block:b.id, name:b.name, variety:b.variety}; });
+    var parts=EST_PARTS[b.id], want=parts?Object.keys(parts):[b.id], k;
+    for (k in d.rows) if (d.rows[k].block===b.id && want.indexOf(k)<0) delete d.rows[k];
+    want.forEach(function(id){ var r=d.rows[id]=d.rows[id]||{}; r.block=b.id; r.variety=b.variety; r.name=parts?b.name+id.slice(b.id.length):b.name;
+      if (parts){ r.trees=parts[id][0]; r.ha=parts[id][1]; } else { delete r.trees; delete r.ha; } }); });
   EST_VARS.forEach(function(c){ d.vars[c]=d.vars[c]||{}; if (d.vars[c].days==null) d.vars[c].days=EST_DAYS[c]; if (d.vars[c].can==null) d.vars[c].can=0; });
   return d; }
 function estRows(d, code){ var a=[]; for (var k in d.rows){ var r=d.rows[k]; if (!code || r.variety===code) a.push(Object.assign({id:k}, r)); }
@@ -1144,7 +1152,7 @@ function estSum(d, code){ var t={trees:0,ha:0,count:0,fin:0,expT:0,expB:0,nonB:0
   return t; }
 function estHasData(d){ return estRows(d).some(function(r){ return ((+r.br)&&(+r.fr)&&(+r.g)) || estFilled(r.final); }); }
 function upDown(now, was){ if (!was) return ''; var p=Math.round((now-was)/was*100); return p===0 ? 'the same' : Math.abs(p)+'% '+(p>0?'up':'down'); }
-function estSaveWork(d){ d.at=Date.now(); d.by=ME.name; Store.put('estimates', d); }
+function estSaveWork(d){ d.at=Date.now(); d.by=ME.name; EST_LOCAL=JSON.parse(JSON.stringify(d)); Store.put('estimates', d); }
 
 VIEWS.estimate=function(el){
   var st=S(), d=estDraft(), fin=estGet('final'), locked=!!fin, tab=VIEW.eTab||'sum';
@@ -1159,19 +1167,17 @@ VIEWS.estimate=function(el){
     var rows=estRows(src,tab), T=estSum(src,tab), L=lastSeason(tab), lastTha=T.ha?L.tons/T.ha:0, warns=[], vr=src.vars[tab]||{};
     h+='<div class="card"><h3>'+esc(vName(tab))+': fruit count per block</h3><div class="small mute" style="margin-bottom:8px">Type in the white boxes; the rest is worked out. Final tons starts as the fruit count. Type another figure there if you trust it more. Export bin '+fmt(kgE(src))+' kg, juice bin '+fmt(kgJ(src))+' kg, '+((src&&src.bpb)||st.bagsPerBin)+' bags a bin (Settings).</div>'+
       '<div class="tw"><table class="est"><thead><tr><th>Block</th><th class="r">Trees</th><th class="r">Ha</th><th class="r">Branches<br>per tree</th><th class="r">Fruit per<br>branch</th><th class="r">Fruit<br>weight (g)</th><th class="r">Count<br>says (t)</th><th class="r">t/ha</th><th class="r">Final (t)</th><th class="r">Export %</th><th class="r">Export<br>bins</th><th class="r">Non-export<br>bins</th></tr></thead><tbody>';
-    rows.forEach(function(r){ var c=estRow(r,src), part=r.id!==r.block, odd=lastTha && c.count && (c.ctha>lastTha*1.4 || c.ctha<lastTha*0.5);
+    rows.forEach(function(r){ var c=estRow(r,src), odd=lastTha && c.count && (c.ctha>lastTha*1.4 || c.ctha<lastTha*0.5);
       if (odd) warns.push('<b>'+esc(r.name)+':</b> the count gives '+fmt(c.ctha,1)+' t/ha. Last season '+esc(vShort(tab))+' averaged '+fmt(lastTha,1)+' t/ha.'+(c.over?' Final figure set to '+fmt(c.fin,1)+' t.':''));
       function inp(f,val,ph){ return '<input class="cell e" type="number" inputmode="decimal" min="0" step="any" data-r="'+r.id+'" data-f="'+f+'" value="'+(estFilled(val)?val:'')+'"'+(ph?' placeholder="'+ph+'"':'')+' aria-label="'+esc(r.name)+' '+f+'"'+dis+'>'; }
-      var firstPart=part && rows.filter(function(x){return x.block===r.block;})[0].id===r.id;
-      h+='<tr><td class="nowrap"><b>'+esc(r.name)+'</b>'+(locked?'':(part?(firstPart?' <button class="btn sm" data-join="'+r.block+'">Join</button>':''):' <button class="btn sm" data-split="'+r.id+'">Split</button>'))+'</td>'+
-        '<td class="r num">'+(part&&!locked?inp('trees',r.trees):fmt(c.trees))+'</td><td class="r num">'+(part&&!locked?inp('ha',r.ha):fmt(c.ha,1))+'</td>'+
+      h+='<tr><td class="nowrap"><b>'+esc(r.name)+'</b></td><td class="r num">'+fmt(c.trees)+'</td><td class="r num">'+fmt(c.ha,1)+'</td>'+
         '<td class="r">'+inp('br',r.br)+'</td><td class="r">'+inp('fr',r.fr)+'</td><td class="r">'+inp('g',r.g)+'</td>'+
         '<td class="r num calc" data-c="'+r.id+'|count">'+(c.count?fmt(c.count,1):'')+'</td><td class="r num calc" data-c="'+r.id+'|ctha"'+(odd?' style="color:var(--amber-t);font-weight:700"':'')+'>'+(c.count?fmt(c.ctha,1):'')+'</td>'+
         '<td class="r">'+inp('final',r.final,c.count?fmt(c.count,1):'')+'</td><td class="r">'+inp('exp',r.exp)+'</td>'+
         '<td class="r num calc" data-c="'+r.id+'|expB">'+(c.fin?fmt(c.expB):'')+'</td><td class="r num calc" data-c="'+r.id+'|nonB">'+(c.fin?fmt(c.nonB):'')+'</td></tr>'; });
     h+='<tr class="tot"><td>'+esc(vShort(tab))+'</td><td class="r num">'+fmt(T.trees)+'</td><td class="r num">'+fmt(T.ha,1)+'</td><td></td><td></td><td class="r num" data-c="T|g">'+(T.g?fmt(T.g):'')+'</td><td class="r num" data-c="T|count">'+fmt(T.count,1)+'</td><td class="r num" data-c="T|ctha">'+(T.ha?fmt(T.count/T.ha,1):'')+'</td><td class="r num" data-c="T|fin">'+fmt(T.fin,1)+'</td><td class="r num" data-c="T|exp">'+(T.fin?pct(T.expT,T.fin)+'%':'')+'</td><td class="r num" data-c="T|expB">'+fmt(T.expB)+'</td><td class="r num" data-c="T|nonB">'+fmt(T.nonB)+'</td></tr></tbody></table></div>'+
       warns.map(function(w){ return '<div class="small" style="color:var(--amber-t);margin-top:8px">'+w+'</div>'; }).join('')+
-      '<div class="small mute" style="margin-top:8px">Trees and hectares come from Orchards. Use Split when two parts of a block carry different crops (for example 8a and 8b).</div></div>';
+      '<div class="small mute" style="margin-top:8px">Trees and hectares come from Orchards. Blok 8 is estimated as 8a and 8b, as on Fanus\'s sheet.</div></div>';
     // check against last season + picking plan
     var diff=T.bins-L.bins;
     h+='<div class="grid g2"><div class="card"><h3>Check against last season</h3><div class="small mute" style="margin-bottom:8px">Per variety. Last season\'s juice bins were not recorded per block.</div>'+
@@ -1229,17 +1235,8 @@ VIEWS.estimate=function(el){
   el.querySelectorAll('input.v').forEach(function(inp){ inp.onchange=function(){ var w=estDraft(), f=inp.getAttribute('data-vf'), v=num(inp.value);
     if (f==='days') v=Math.max(1,Math.round(v||EST_DAYS[tab])); if (f==='can') v=Math.min(100,v||0);
     if (v==null) delete w.vars[tab][f]; else w.vars[tab][f]=v; estSaveWork(w); }; });
-  el.querySelectorAll('[data-split]').forEach(function(b){ b.onclick=function(){ var w=estDraft(), id=b.getAttribute('data-split'), r=w.rows[id], blk=blockById(r.block)||{};
-    var tr=+blk.trees||0, ha=+blk.ha||0, a=Math.round(tr/2);
-    ['a','b'].forEach(function(s,i){ w.rows[id+s]=Object.assign({}, r, {name:r.name+s, trees:i?tr-a:a, ha:Math.round(ha/2*100)/100}); delete w.rows[id+s].final; });
-    delete w.rows[id]; estSaveWork(w); toast(r.name+' split in two. Check the trees and hectares of each part.'); route(); }; });
-  el.querySelectorAll('[data-join]').forEach(function(b){ b.onclick=function(){ var w=estDraft(), blk=b.getAttribute('data-join'), bb=blockById(blk)||{};
-    if (!confirm('Join the parts of '+(bb.name||'this block')+' again? The fruit counts of the parts are cleared.')) return;
-    for (var k in w.rows) if (w.rows[k].block===blk) delete w.rows[k];
-    w.rows[blk]={block:blk, name:bb.name, variety:bb.variety}; estSaveWork(w); route(); }; });
   if ($('eFanus')) $('eFanus').onclick=function(){ var w=estDraft();
-    if (w.rows['8'] && blockById('8')){ var r8=w.rows['8']; delete w.rows['8']; ['8a','8b'].forEach(function(id){ w.rows[id]={block:'8', name:r8.name+id.slice(1), variety:r8.variety}; }); }
-    for (var id in EST_FANUS){ var f=EST_FANUS[id], r=w.rows[id]; if (!r) continue; r.br=f[0]; r.fr=f[1]; r.g=f[2]; r.exp=f[3]; if (f[4]){ r.trees=f[4]; r.ha=f[5]; } }
+    for (var id in EST_FANUS){ var f=EST_FANUS[id], r=w.rows[id]; if (!r) continue; r.br=f[0]; r.fr=f[1]; r.g=f[2]; r.exp=f[3]; }
     estSaveWork(w); Store.log(ME.name,'Harvest estimate: filled in from Fanus\'s 2027 spreadsheet'); toast('Spreadsheet figures filled in'); route(); };
   if ($('eUnlock')) $('eUnlock').onclick=function(){ if (!confirm('Unlock the final reading? It is removed as the benchmark until you save a final reading again. The first and second readings stay.')) return;
     var w=estDraft(); w.rows=JSON.parse(JSON.stringify(fin.rows)); w.vars=JSON.parse(JSON.stringify(fin.vars)); estSaveWork(w);
