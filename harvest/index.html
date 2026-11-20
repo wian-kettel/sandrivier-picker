@@ -129,6 +129,8 @@ tbody tr:hover{background:#faf9f5}
 .seg button.on{background:var(--card);color:var(--ink);box-shadow:var(--sh)}
 input[type=text],input[type=number],input[type=date],input[type=time],input[type=search],select,textarea{border:1px solid var(--line);background:#fff;border-radius:10px;padding:9px 11px;width:100%}
 input.cell{width:84px;max-width:22vw;min-height:44px;padding:6px 8px;text-align:right}
+input.cell.e{width:72px}
+table.est th{white-space:normal;vertical-align:bottom;line-height:1.25}table.est td.calc{background:var(--soft)}table.est input:disabled{background:var(--soft);color:var(--ink);opacity:1}
 label.f{display:block;font-size:13px;font-weight:620;color:var(--mute);margin:10px 0 4px}
 .fr{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:0 12px}
 .bandgrid{display:flex;flex-wrap:wrap;gap:6px}
@@ -367,7 +369,7 @@ var FIREBASE_CONFIG = window.HT_CONFIG || null;
 var EMU = /[?&]emu=1/.test(location.search);
 var TEST = /[?&]test=1/.test(location.search);
 var ADMIN_EMAIL = 'wian@kettel.co.za';
-var APP_VERSION = '1.6.1';
+var APP_VERSION = '1.7.0';
 var HIST = {"2025":[["2025-01-20","EBC",55,30],["2025-01-21","EBC",59,30],["2025-01-22","EBC",59,30],["2025-01-23","EBC",53,32],["2025-01-24","EBC",40,25],["2025-01-27","EBC",0,27],["2025-01-28","EBC",0,21],["2025-01-29","EBC",0,13],["2025-02-06","PTR",30,17],["2025-02-07","PTR",30,21],["2025-02-10","PTR",30,24],["2025-02-11","PTR",39,39],["2025-02-12","PTR",49,53],["2025-02-13","PTR",39,53],["2025-02-14","PTR",51,56],["2025-02-17","PTR",35,30],["2025-02-18","PTR",57,39],["2025-02-19","PTR",47,63],["2025-02-20","PTR",49,37],["2025-02-21","PTR",37,45],["2025-02-24","PTR",43,58],["2025-02-25","PTR",10,31],["2025-03-11","FRL",55,8],["2025-03-12","FRL",59,9],["2025-03-13","FRL",69,14],["2025-03-14","FRL",56,5],["2025-03-17","FRL",77,14],["2025-03-18","FRL",36,9],["2025-01-20","RSM",7,1],["2025-01-21","RSM",9,2],["2025-01-22","RSM",7,2],["2025-01-23","RSM",0,5],["2025-01-26","CLP",4,2],["2025-01-27","CLP",0,8],["2025-01-28","CLP",0,3]],"2026":[["2026-01-07","EBC",30,13],["2026-01-08","EBC",19,16],["2026-01-09","EBC",8,5],["2026-01-14","EBC",23,16],["2026-01-15","EBC",22,17],["2026-01-18","EBC",20,14],["2026-01-19","EBC",21,28],["2026-01-20","EBC",17,18],["2026-01-21","EBC",0,29],["2026-01-22","EBC",2,33],["2026-01-23","EBC",0,0],["2026-01-24","EBC",2,38],["2026-01-27","EBC",5,45],["2026-01-28","EBC",0,8],["2026-02-16","PTR",34,31],["2026-02-17","PTR",55,45],["2026-02-18","PTR",52,50],["2026-02-19","PTR",57,54],["2026-02-20","PTR",54,54],["2026-02-21","PTR",24,21],["2026-02-23","PTR",40,45],["2026-02-24","PTR",36,57],["2026-02-25","PTR",40,51],["2026-02-26","PTR",0,124],["2026-02-27","PTR",0,85],["2026-03-02","PTR",0,79],["2026-03-03","PTR",0,88],["2026-03-04","PTR",0,70],["2026-03-05","PTR",0,102],["2026-03-06","PTR",0,28],["2026-03-09","FRL",94,11],["2026-03-10","FRL",94,15],["2026-03-11","FRL",82,20],["2026-03-12","FRL",80,20],["2026-03-13","FRL",70,21],["2026-03-16","FRL",70,15],["2026-03-17","FRL",35,22],["2026-01-20","RSM",0,18],["2026-01-21","RSM",0,25],["2026-01-22","RSM",0,9],["2026-01-20","CLP",0,6],["2026-01-21","CLP",0,9],["2026-01-22","CLP",0,2]]};   // whiteboard bins: [date, variety, export, juice]; juice includes canning (2025)
 
 var VARIETIES = [
@@ -408,8 +410,8 @@ function TODAY(){ return ymd(NOW()); }
    STORE (prototype version: localStorage)
    ===================================================================== */
 var Store = (function(){
-  var queued=false, fb=null, db=null, mem={}, ready={}, subs=[], listeners=[], pending=0, failed=0, lastErr='';
-  var COLS=['settings','workers','bands','blocks','bloom','teamDays','pickerDays','bins','loans','attendance','paidWeeks','audit','users','dayFlags','devices'];
+  var queued=false, fb=null, db=null, mem={}, ready={}, denied={}, subs=[], listeners=[], pending=0, failed=0, lastErr='';
+  var COLS=['settings','workers','bands','blocks','bloom','teamDays','pickerDays','bins','loans','attendance','paidWeeks','audit','users','dayFlags','devices','estimates'];
   COLS.forEach(function(c){ mem[c]={}; });
   function clean(o){ var x={}; for (var k in o) if (k!=='id' && o[k]!==undefined) x[k]=o[k]; return x; }
   function notify(col){ listeners.forEach(function(f){ f(col); }); }
@@ -428,7 +430,7 @@ var Store = (function(){
       if (!snap.metadata.fromCache || !navigator.onLine) ready[col]=true;
       notify(col);
     }, function(e){ console.warn('listen '+col, e.code); lastErr=e.code||'';
-      if (col==='devices') ready[col]=true;   // phone battery is extra: never hold up the app for it
+      if (col==='devices' || col==='estimates'){ ready[col]=true; if (e.code==='permission-denied') denied[col]=true; }   // extras: never hold up the app for them
       // access can arrive a moment after sign-in: try again a few times
       if (tries<5) setTimeout(function(){ if (subs.indexOf(u)>=0){ subs.splice(subs.indexOf(u),1); subscribe(col,q,tries+1); } }, 1500*(tries+1));
       else { ready[col]=true; notify(col); } });
@@ -455,13 +457,14 @@ var Store = (function(){
       }
       subscribe('teamDays', query(collection(db,'teamDays'), where('date','>=',from)));
       subscribe('pickerDays', query(collection(db,'pickerDays'), where('date','>=',from)));
-      ['bloom','bins','loans','attendance','paidWeeks','dayFlags','devices'].forEach(function(c){ subscribe(c, collection(db,c)); });
+      ['bloom','bins','loans','attendance','paidWeeks','dayFlags','devices','estimates'].forEach(function(c){ subscribe(c, collection(db,c)); });
       subscribe('audit', query(collection(db,'audit'), orderBy('t','desc'), limit(150)));
       if (role==='admin') subscribe('users', collection(db,'users'));
     },
-    stop:function(){ subs.forEach(function(u){ u(); }); subs=[]; ready={}; COLS.forEach(function(c){ mem[c]={}; }); },
+    stop:function(){ subs.forEach(function(u){ u(); }); subs=[]; ready={}; denied={}; COLS.forEach(function(c){ mem[c]={}; }); },
     isReady:function(){ for (var k in ready) if (!ready[k]) return false; return true; },
     settings:function(){ return mem.settings.main || null; },
+    denied:function(col){ return !!denied[col]; },
     setSettings:function(s,who,what){ mem.settings.main=s; track(setDoc(doc(db,'settings','main'), toDb('settings',s)), 'settings'); if (what) this.log(who,what); notify('settings'); },
     all:function(col){ var o=mem[col], a=[]; for (var k in o) a.push(o[k]); return a; },
     get:function(col,id){ return mem[col][id]||null; },
@@ -703,14 +706,14 @@ $('modal').onclick=function(e){ var b=e.target.closest('[data-a]'); if (!b) retu
 /* =====================================================================
    Router + tabs
    ===================================================================== */
-var TABS=[['today','Today'],['pickers','Pickers'],['bins','Bins'],['pay','Pay'],['season','Season'],['orchards','Orchards'],['settings','Settings']];
+var TABS=[['today','Today'],['pickers','Pickers'],['bins','Bins'],['pay','Pay'],['season','Season'],['estimate','Estimate'],['orchards','Orchards'],['settings','Settings']];
 var VIEW={};    // per-view state
 function go(t){ location.hash='#'+t; }
 function route(){
   if (!ME || (ME.role!=='office' && ME.role!=='admin') || $('scan').classList.contains('on') || !S()) return;
   var t=(location.hash||'#today').slice(1).split('/')[0]; if (!VIEWS[t]) t='today';
   $('tabs').innerHTML=TABS.map(function(x){ return '<button class="tab'+(x[0]===t?' on':'')+'" data-t="'+x[0]+'">'+x[1]+'</button>'; }).join('');
-  var more=['season','orchards','settings'].indexOf(t)>=0;
+  var more=['season','estimate','orchards','settings'].indexOf(t)>=0;
   $('bnav').innerHTML=[['today','Today'],['pickers','Pickers'],['bins','Bins'],['pay','Pay']].map(function(x){ return '<button class="'+(x[0]===t?'on':'')+'" data-t="'+x[0]+'">'+ICON[x[0]]+x[1]+'</button>'; }).join('')+
     '<button class="'+(more?'on':'')+'" data-more="1">'+ICON.more+(more?TABS.filter(function(x){return x[0]===t;})[0][1]:'More')+'</button>';
   syncPill();
@@ -725,12 +728,13 @@ var ICON={
   pay:'<svg viewBox="0 0 24 24"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/></svg>',
   more:'<svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.3"/><circle cx="12" cy="12" r="1.3"/><circle cx="19" cy="12" r="1.3"/></svg>',
   season:'<svg viewBox="0 0 24 24"><path d="M3 20h18M5 16l4-5 4 3 6-8"/></svg>',
+  estimate:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2M12 12h2M16 12h0M8 16h2M12 16h2M16 16h0"/></svg>',
   orchards:'<svg viewBox="0 0 24 24"><path d="M12 21v-6"/><path d="M12 15c-4 0-6-2.5-6-5.5S8.5 3 12 3s6 3.5 6 6.5S16 15 12 15z"/></svg>',
   settings:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>'
 };
 $('bnav').onclick=function(e){ var b=e.target.closest('button'); if (!b) return;
   if (b.getAttribute('data-t')){ go(b.getAttribute('data-t')); window.scrollTo(0,0); return; }
-  modal('<h2>More</h2><div class="morelist">'+[['season','Season'],['orchards','Orchards'],['settings','Settings']].map(function(x){ return '<button data-a="go" data-go="'+x[0]+'">'+ICON[x[0]]+x[1]+'</button>'; }).join('')+'</div>',
+  modal('<h2>More</h2><div class="morelist">'+[['season','Season'],['estimate','Estimate'],['orchards','Orchards'],['settings','Settings']].map(function(x){ return '<button data-a="go" data-go="'+x[0]+'">'+ICON[x[0]]+x[1]+'</button>'; }).join('')+'</div>',
     { go:function(btn){ closeModal(); go(btn.getAttribute('data-go')); window.scrollTo(0,0); } }); };
 window.addEventListener('hashchange', route);
 // redraw after data changes, but never while someone is typing in a box or a dialog is open
@@ -749,7 +753,7 @@ function rerender(){
 /* ---------------- chart helpers ---------------- */
 function lineChart(series, opts){
   // series: [{name,color,pts:[[x,y]...], dash}]
-  var NARROW=window.innerWidth<640, W=NARROW?380:640,H=NARROW?260:240,L=40,Rr=12,T=10,B=28;
+  var NARROW=window.innerWidth<640, W=NARROW?380:640,H=NARROW?260:240,L=40,Rr=26,T=10,B=28;
   var xs=[],ys=[0]; series.forEach(function(s){ s.pts.forEach(function(p){ xs.push(p[0]); ys.push(p[1]); }); });
   if (!xs.length) return '<div class="empty">No data yet.</div>';
   var xmin=Math.min.apply(null,xs), xmax=Math.max.apply(null,xs); if (xmax===xmin) xmax=xmin+1;
@@ -1076,6 +1080,7 @@ VIEWS.season=function(el){
       (n? 'After '+n+' picking day'+(n>1?'s':'')+'. Last season at day '+n+': '+fmt(lastSame)+(diff!=null?' <span class="tag '+(diff>=0?'g':'r')+'">'+(diff>=0?'+':'')+diff+'%</span>':'') : 'Not started. Last season: '+fmt(lastTot)+' bins in '+last.length+' days')+'</div></div>';
   });
   h+='</div>';
+  h+=estTrackCard(v);
   var ser=years.slice(-3).map(function(y){ return {name:y===st.season?st.seasonLabel+' (this season)':'Harvest '+y, color:colors[y]||'#9aa39d', pts:series(seasons[y],v,f), dash:y!==st.season, w:y===st.season?3.5:2}; });
   var maxDay=Math.max.apply(null,ser.map(function(s){return s.pts.length;}).concat([1]));
   var xt=[]; for (var d=1; d<=maxDay; d+= maxDay>20?5:maxDay>10?2:1) xt.push([d,'Day '+d]);
@@ -1090,6 +1095,191 @@ VIEWS.season=function(el){
   el.querySelectorAll('#sF button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-v')===f); b.onclick=function(){ VIEW.sField=b.getAttribute('data-v'); route(); }; });
   el.querySelectorAll('.kpi[data-v]').forEach(function(c){ c.onclick=function(){ VIEW.sVar=c.getAttribute('data-v'); route(); }; });
 };
+
+/* ---------------- ESTIMATE (harvest estimate / oesskatting) ----------------
+   estimates/{season}|work  = the working estimate Fanus edits
+   estimates/{season}|r1, |r2, |final = saved readings (snapshots). The final reading is the benchmark. */
+var EST_VARS=['EBC','PTR','FRL'];                       // in harvest order
+var EST_READ=[['r1','First reading'],['r2','Second reading'],['final','Final reading']];
+var EST_DAYS={EBC:10,PTR:10,FRL:6};                     // planned picking days until Fanus changes them
+// Fanus's Oesskatting 2027 spreadsheet: branches per tree, fruit per branch, fruit weight (g), export %
+var EST_FANUS={'1':[24,18,180,70],'2':[26,9,180,70],'4':[20,12,180,70],'5':[20,10,180,70],'3':[23,11,160,70],'6':[23,9,160,70],'7':[22,6,145,85],
+  '8a':[22,6,145,85,2323,1.5],'8b':[18,4,145,85,2119,1.5]};
+function kgE(d){ return (d&&d.kgE) || S().kgExport || 470; }
+function kgJ(d){ return (d&&d.kgJ) || S().kgJuice || 445; }
+function estGet(kind){ return Store.get('estimates', S().season+'|'+kind); }
+function estBench(){ return estGet('final') || estGet('r2') || estGet('r1'); }
+function estFilled(v){ return v!=null && v!==''; }
+// last season's whiteboard bins for one variety
+function lastSeason(code){ var ys=Object.keys(HIST).filter(function(y){ return y<S().season; }).sort(), y=ys[ys.length-1], e=0, j=0, days={};
+  (HIST[y]||[]).forEach(function(r){ if (r[1]!==code) return; e+=r[2]; j+=r[3]; if (r[2]+r[3]>0) days[r[0]]=1; });
+  return {year:y, exp:e, juice:j, bins:e+j, days:Object.keys(days).length, tons:(e*kgE()+j*kgJ())/1000}; }
+// the working estimate, with a row for every block (a block that was split has its parts instead)
+function estDraft(){ var w=estGet('work'), d={id:S().season+'|work', season:S().season, kind:'work', rows:{}, vars:{}};
+  if (w){ d.rows=JSON.parse(JSON.stringify(w.rows||{})); d.vars=JSON.parse(JSON.stringify(w.vars||{})); }
+  Store.all('blocks').forEach(function(b){ if (EST_VARS.indexOf(b.variety)<0) return;
+    var has=false; for (var k in d.rows) if (d.rows[k].block===b.id) has=true;
+    if (!has) d.rows[b.id]={block:b.id, name:b.name, variety:b.variety}; });
+  EST_VARS.forEach(function(c){ d.vars[c]=d.vars[c]||{}; if (d.vars[c].days==null) d.vars[c].days=EST_DAYS[c]; if (d.vars[c].can==null) d.vars[c].can=0; });
+  return d; }
+function estRows(d, code){ var a=[]; for (var k in d.rows){ var r=d.rows[k]; if (!code || r.variety===code) a.push(Object.assign({id:k}, r)); }
+  return a.sort(function(x,y){ return (EST_VARS.indexOf(x.variety)-EST_VARS.indexOf(y.variety)) || (+x.block-+y.block) || (x.id<y.id?-1:1); }); }
+// one block: fruit count -> tons -> bins
+function estRow(r, d){ var b=blockById(r.block)||{}, trees=estFilled(r.trees)?+r.trees:(+b.trees||0), ha=estFilled(r.ha)?+r.ha:(+b.ha||0);
+  var fpt=(+r.br||0)*(+r.fr||0), count=fpt*(+r.g||0)/1000*trees/1000, over=estFilled(r.final);
+  var fin=over?+r.final:count, expT=fin*(+r.exp||0)/100, nonT=fin-expT;
+  return {trees:trees, ha:ha, fpt:fpt, count:count, ctha:ha?count/ha:0, fin:fin, over:over, expT:expT, nonT:nonT, expB:expT*1000/kgE(d), nonB:nonT*1000/kgJ(d)}; }
+function estSum(d, code){ var t={trees:0,ha:0,count:0,fin:0,expT:0,expB:0,nonB:0,gw:0,gn:0,n:0};
+  estRows(d,code).forEach(function(r){ var c=estRow(r,d); t.trees+=c.trees; t.ha+=c.ha; t.count+=c.count; t.fin+=c.fin; t.expT+=c.expT; t.expB+=c.expB; t.nonB+=c.nonB; t.n++;
+    if (+r.g){ t.gw+=(+r.g)*c.trees; t.gn+=c.trees; } });
+  t.bins=t.expB+t.nonB; t.g=t.gn?t.gw/t.gn:0; t.bags=t.bins*((d&&d.bpb)||S().bagsPerBin);
+  var can=0; (code?[code]:EST_VARS).forEach(function(c){ var v=(d.vars||{})[c]||{}; if (+v.can){ var s=code?t:estSum(d,c); can+=s.nonB*(+v.can)/100; } }); t.canB=can;
+  return t; }
+function estHasData(d){ return estRows(d).some(function(r){ return ((+r.br)&&(+r.fr)&&(+r.g)) || estFilled(r.final); }); }
+function upDown(now, was){ if (!was) return ''; var p=Math.round((now-was)/was*100); return p===0 ? 'the same' : Math.abs(p)+'% '+(p>0?'up':'down'); }
+function estSaveWork(d){ d.at=Date.now(); d.by=ME.name; Store.put('estimates', d); }
+
+VIEWS.estimate=function(el){
+  var st=S(), d=estDraft(), fin=estGet('final'), locked=!!fin, tab=VIEW.eTab||'sum';
+  var src=locked?fin:d, hasData=estHasData(src), dis=locked?' disabled':'';
+  var h='<div class="bar"><h2>Harvest estimate '+esc(st.seasonLabel)+'</h2><div class="seg" id="eTab">'+
+    EST_VARS.map(function(c){ return '<button data-v="'+c+'">'+esc(vShort(c))+'</button>'; }).join('')+'<button data-v="sum">Summary</button></div></div>';
+  if (Store.denied('estimates')) h+='<div class="note">The estimate cannot be saved yet. The Firebase rules need the update that came with version 1.7. Ask Wian to paste the new rules.</div>';
+  if (locked) h+='<div class="note b" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 260px">The <b>final reading</b> was saved on '+niceShort(fin.date)+' by '+esc(fin.by)+' and is locked. The season is tracked against it.</span><button class="btn sm" id="eUnlock">Unlock to change</button></div>';
+  else if (!hasData) h+='<div class="note b" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 260px"><b>No estimate yet.</b> Open a variety and type the fruit counts per block, or start from the figures in Fanus\'s 2027 spreadsheet.</span><button class="btn sm" id="eFanus">Use the spreadsheet figures</button></div>';
+
+  if (tab!=='sum'){
+    var rows=estRows(src,tab), T=estSum(src,tab), L=lastSeason(tab), lastTha=T.ha?L.tons/T.ha:0, warns=[], vr=src.vars[tab]||{};
+    h+='<div class="card"><h3>'+esc(vName(tab))+': fruit count per block</h3><div class="small mute" style="margin-bottom:8px">Type in the white boxes; the rest is worked out. Final tons starts as the fruit count. Type another figure there if you trust it more. Export bin '+fmt(kgE(src))+' kg, juice bin '+fmt(kgJ(src))+' kg, '+((src&&src.bpb)||st.bagsPerBin)+' bags a bin (Settings).</div>'+
+      '<div class="tw"><table class="est"><thead><tr><th>Block</th><th class="r">Trees</th><th class="r">Ha</th><th class="r">Branches<br>per tree</th><th class="r">Fruit per<br>branch</th><th class="r">Fruit<br>weight (g)</th><th class="r">Count<br>says (t)</th><th class="r">t/ha</th><th class="r">Final (t)</th><th class="r">Export %</th><th class="r">Export<br>bins</th><th class="r">Non-export<br>bins</th></tr></thead><tbody>';
+    rows.forEach(function(r){ var c=estRow(r,src), part=r.id!==r.block, odd=lastTha && c.count && (c.ctha>lastTha*1.4 || c.ctha<lastTha*0.5);
+      if (odd) warns.push('<b>'+esc(r.name)+':</b> the count gives '+fmt(c.ctha,1)+' t/ha. Last season '+esc(vShort(tab))+' averaged '+fmt(lastTha,1)+' t/ha.'+(c.over?' Final figure set to '+fmt(c.fin,1)+' t.':''));
+      function inp(f,val,ph){ return '<input class="cell e" type="number" inputmode="decimal" min="0" step="any" data-r="'+r.id+'" data-f="'+f+'" value="'+(estFilled(val)?val:'')+'"'+(ph?' placeholder="'+ph+'"':'')+' aria-label="'+esc(r.name)+' '+f+'"'+dis+'>'; }
+      var firstPart=part && rows.filter(function(x){return x.block===r.block;})[0].id===r.id;
+      h+='<tr><td class="nowrap"><b>'+esc(r.name)+'</b>'+(locked?'':(part?(firstPart?' <button class="btn sm" data-join="'+r.block+'">Join</button>':''):' <button class="btn sm" data-split="'+r.id+'">Split</button>'))+'</td>'+
+        '<td class="r num">'+(part&&!locked?inp('trees',r.trees):fmt(c.trees))+'</td><td class="r num">'+(part&&!locked?inp('ha',r.ha):fmt(c.ha,1))+'</td>'+
+        '<td class="r">'+inp('br',r.br)+'</td><td class="r">'+inp('fr',r.fr)+'</td><td class="r">'+inp('g',r.g)+'</td>'+
+        '<td class="r num calc" data-c="'+r.id+'|count">'+(c.count?fmt(c.count,1):'')+'</td><td class="r num calc" data-c="'+r.id+'|ctha"'+(odd?' style="color:var(--amber-t);font-weight:700"':'')+'>'+(c.count?fmt(c.ctha,1):'')+'</td>'+
+        '<td class="r">'+inp('final',r.final,c.count?fmt(c.count,1):'')+'</td><td class="r">'+inp('exp',r.exp)+'</td>'+
+        '<td class="r num calc" data-c="'+r.id+'|expB">'+(c.fin?fmt(c.expB):'')+'</td><td class="r num calc" data-c="'+r.id+'|nonB">'+(c.fin?fmt(c.nonB):'')+'</td></tr>'; });
+    h+='<tr class="tot"><td>'+esc(vShort(tab))+'</td><td class="r num">'+fmt(T.trees)+'</td><td class="r num">'+fmt(T.ha,1)+'</td><td></td><td></td><td class="r num" data-c="T|g">'+(T.g?fmt(T.g):'')+'</td><td class="r num" data-c="T|count">'+fmt(T.count,1)+'</td><td class="r num" data-c="T|ctha">'+(T.ha?fmt(T.count/T.ha,1):'')+'</td><td class="r num" data-c="T|fin">'+fmt(T.fin,1)+'</td><td class="r num" data-c="T|exp">'+(T.fin?pct(T.expT,T.fin)+'%':'')+'</td><td class="r num" data-c="T|expB">'+fmt(T.expB)+'</td><td class="r num" data-c="T|nonB">'+fmt(T.nonB)+'</td></tr></tbody></table></div>'+
+      warns.map(function(w){ return '<div class="small" style="color:var(--amber-t);margin-top:8px">'+w+'</div>'; }).join('')+
+      '<div class="small mute" style="margin-top:8px">Trees and hectares come from Orchards. Use Split when two parts of a block carry different crops (for example 8a and 8b).</div></div>';
+    // check against last season + picking plan
+    var diff=T.bins-L.bins;
+    h+='<div class="grid g2"><div class="card"><h3>Check against last season</h3><div class="small mute" style="margin-bottom:8px">Per variety. Last season\'s juice bins were not recorded per block.</div>'+
+      '<div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(130px,1fr))">'+
+        '<div class="stat est"><b class="num">'+fmt(T.bins)+'</b><span>bins this estimate · '+fmt(T.fin)+' t · '+fmt(T.bags)+' bags</span></div>'+
+        '<div class="stat"><b class="num">'+fmt(L.bins)+'</b><span>bins last season · '+fmt(L.exp)+' export, '+fmt(L.juice)+' juice</span></div>'+
+        '<div class="stat"><b>'+(T.bins&&L.bins?upDown(T.bins,L.bins):'n/a')+'</b><span>'+(T.bins&&L.bins?fmt(Math.abs(diff))+(diff<0?' fewer':' more')+' bins than last season':'against last season')+'</span></div>'+
+      '</div>'+
+      '<div class="list-row" style="margin-top:10px"><span style="flex:1">Fruit weight last season (g)</span><input class="cell v" type="number" inputmode="decimal" min="0" data-vf="lastG" value="'+(estFilled(vr.lastG)?vr.lastG:'')+'" aria-label="Fruit weight last season"'+dis+'></div>'+
+      '<div class="list-row"><span class="mute" style="flex:1">Fruit weight this estimate</span><b>'+(T.g?fmt(T.g)+' g'+(+vr.lastG?' · '+upDown(T.g,+vr.lastG):''):'n/a')+'</b></div></div>'+
+      '<div class="card"><h3>Picking plan</h3><div class="small mute" style="margin-bottom:8px">Sets the straight line on the Season page.</div>'+
+      '<div class="list-row"><span style="flex:1">Planned picking days</span><input class="cell v" type="number" inputmode="numeric" min="1" max="60" data-vf="days" value="'+(vr.days||'')+'" aria-label="Planned picking days"'+dis+'></div>'+
+      '<div class="list-row"><span class="mute" style="flex:1">Last season it took</span><b>'+L.days+' picking days</b></div>'+
+      '<div class="list-row"><span class="mute" style="flex:1">Bins a day needed</span><b class="num">'+(T.bins&&vr.days?fmt(T.bins/vr.days):'n/a')+'</b></div>'+
+      '<div class="list-row"><span style="flex:1">Of the non-export fruit, to canning %</span><input class="cell v" type="number" inputmode="decimal" min="0" max="100" data-vf="can" value="'+(+vr.can||0)+'" aria-label="Canning percent"'+dis+'></div>'+
+      (T.canB?'<div class="small mute" style="margin-top:6px">'+fmt(T.canB)+' bins to canning, '+fmt(T.nonB-T.canB)+' to juice.</div>':'')+'</div></div>';
+  } else {
+    var F=estSum(src,null), lastAll=0; EST_VARS.forEach(function(c){ lastAll+=lastSeason(c).bins; });
+    h+='<div class="grid g4"><div class="card kpi hero"><div class="lbl">Estimated crop</div><div class="val num">'+(hasData?fmt(F.bins)+' bins':'n/a')+'</div><div class="sub">'+fmt(F.fin)+' t · '+fmt(F.bags)+' bags</div></div>'+
+      '<div class="card kpi"><div class="lbl">Export</div><div class="val num">'+fmt(F.expB)+' bins</div><div class="sub">'+pct(F.expB,F.bins)+'% of bins</div>'+splitBar(F.expB,F.nonB)+'</div>'+
+      '<div class="card kpi"><div class="lbl">Non-export</div><div class="val num">'+fmt(F.nonB)+' bins</div><div class="sub">Juice or canning'+(F.canB?' · '+fmt(F.canB)+' to canning':' · canning 0')+'</div></div>'+
+      '<div class="card kpi"><div class="lbl">Against last season</div><div class="val">'+(hasData&&lastAll?upDown(F.bins,lastAll):'n/a')+'</div><div class="sub">'+fmt(lastAll)+' bins last season (three main varieties)</div></div></div>';
+    h+='<div class="card"><h3>By variety</h3><div class="small mute" style="margin-bottom:6px">'+(locked?'The final reading.':'The working estimate.')+' Tap a variety to open its blocks.</div><div class="tw"><table><thead><tr><th>Variety</th><th class="r">Ha</th><th class="r">Count says (t)</th><th class="r">Final (t)</th><th class="r">t/ha</th><th class="r">Export bins</th><th class="r">Non-export bins</th><th class="r">Total bins</th><th class="r">Last season</th><th class="r">Change</th><th class="r">Picking days</th></tr></thead><tbody>';
+    var dsum=0, sWarn=[];
+    EST_VARS.forEach(function(c){ var t=estSum(src,c), l=lastSeason(c), ch=t.bins&&l.bins?(t.bins-l.bins)/l.bins:0, big=Math.abs(ch)>=0.4, days=+(src.vars[c]||{}).days||0; dsum+=days;
+      if (big) sWarn.push('<b>'+esc(vShort(c))+':</b> the estimate is '+upDown(t.bins,l.bins)+' on last season. Check the fruit count before the final reading.');
+      h+='<tr class="click" data-ev="'+c+'"><td><b>'+esc(vShort(c))+'</b></td><td class="r num">'+fmt(t.ha,1)+'</td><td class="r num">'+fmt(t.count,1)+'</td><td class="r num">'+fmt(t.fin,1)+'</td><td class="r num">'+(t.ha?fmt(t.fin/t.ha,1):'')+'</td><td class="r num">'+fmt(t.expB)+'</td><td class="r num">'+fmt(t.nonB)+'</td><td class="r num"><b>'+fmt(t.bins)+'</b></td><td class="r num">'+fmt(l.bins)+'</td><td class="r nowrap"'+(big?' style="color:var(--amber-t);font-weight:700"':'')+'>'+(t.bins?upDown(t.bins,l.bins):'')+'</td><td class="r num">'+(days||'')+'</td></tr>'; });
+    h+='<tr class="tot"><td>Farm</td><td class="r num">'+fmt(F.ha,1)+'</td><td class="r num">'+fmt(F.count,1)+'</td><td class="r num">'+fmt(F.fin,1)+'</td><td class="r num">'+(F.ha?fmt(F.fin/F.ha,1):'')+'</td><td class="r num">'+fmt(F.expB)+'</td><td class="r num">'+fmt(F.nonB)+'</td><td class="r num">'+fmt(F.bins)+'</td><td class="r num">'+fmt(lastAll)+'</td><td class="r nowrap">'+(F.bins?upDown(F.bins,lastAll):'')+'</td><td class="r num">'+dsum+'</td></tr></tbody></table></div>'+
+      sWarn.map(function(w){ return '<div class="small" style="color:var(--amber-t);margin-top:8px">'+w+'</div>'; }).join('')+'</div>';
+    // readings
+    var prev=null;
+    h+='<div class="card"><h3>Readings</h3><div class="small mute" style="margin-bottom:6px">Each saved estimate is kept with its date and who did it. The final reading locks and becomes the line the season is tracked against.</div><div class="tw"><table><thead><tr><th>Reading</th><th>Date</th><th>Estimate by</th>'+EST_VARS.map(function(c){ return '<th class="r">'+esc(vShort(c))+'</th>'; }).join('')+'<th class="r">Total bins</th><th class="r">Export %</th><th class="r">Change</th></tr></thead><tbody>'+
+      EST_READ.map(function(x){ var r=estGet(x[0]); if (!r) return '<tr><td><b>'+x[1]+'</b></td><td colspan="'+(5+EST_VARS.length)+'" class="mute">Not saved yet</td></tr>';
+        var t=estSum(r,null), row='<tr><td class="nowrap"><b>'+x[1]+'</b>'+(x[0]==='final'?' <span class="tag g">Benchmark</span>':'')+'</td><td class="nowrap">'+niceShort(r.date)+' '+r.date.slice(0,4)+'</td><td>'+esc(r.by)+'</td>'+
+          EST_VARS.map(function(c){ return '<td class="r num">'+fmt(estSum(r,c).bins)+'</td>'; }).join('')+'<td class="r num"><b>'+fmt(t.bins)+'</b></td><td class="r num">'+pct(t.expB,t.bins)+'%</td><td class="r nowrap">'+
+          (prev==null?'<span class="mute">First</span>':(Math.round(t.bins)===Math.round(prev)?'No change':fmt(Math.abs(t.bins-prev))+(t.bins<prev?' fewer':' more')))+'</td></tr>';
+        prev=t.bins; return row; }).join('')+'</tbody></table></div></div>';
+  }
+  if (!locked) h+='<div class="acts" style="justify-content:flex-end"><button class="btn p" id="eSave"'+(hasData?'':' disabled')+'>Save as a reading…</button></div>';
+  el.innerHTML=h;
+
+  el.querySelectorAll('#eTab button').forEach(function(b){ b.classList.toggle('on',b.getAttribute('data-v')===tab); b.onclick=function(){ VIEW.eTab=b.getAttribute('data-v'); route(); }; });
+  el.querySelectorAll('tr[data-ev]').forEach(function(r){ r.onclick=function(){ VIEW.eTab=r.getAttribute('data-ev'); route(); window.scrollTo(0,0); }; });
+  function num(v){ return v==='' ? null : Math.max(0,parseFloat(String(v).replace(',','.'))||0); }
+  // the screen is not redrawn while someone is typing, so update the worked-out columns in place
+  function setC(id,k,v){ var n=el.querySelector('[data-c="'+id+'|'+k+'"]'); if (n) n.textContent=v; }
+  function refresh(){ if (tab==='sum') return; var w=estDraft(), TT=estSum(w,tab);
+    estRows(w,tab).forEach(function(r){ var c=estRow(r,w); setC(r.id,'count',c.count?fmt(c.count,1):''); setC(r.id,'ctha',c.count?fmt(c.ctha,1):''); setC(r.id,'expB',c.fin?fmt(c.expB):''); setC(r.id,'nonB',c.fin?fmt(c.nonB):'');
+      var fi=el.querySelector('input[data-r="'+r.id+'"][data-f="final"]'); if (fi) fi.placeholder=c.count?fmt(c.count,1):''; });
+    setC('T','g',TT.g?fmt(TT.g):''); setC('T','count',fmt(TT.count,1)); setC('T','ctha',TT.ha?fmt(TT.count/TT.ha,1):''); setC('T','fin',fmt(TT.fin,1)); setC('T','exp',TT.fin?pct(TT.expT,TT.fin)+'%':''); setC('T','expB',fmt(TT.expB)); setC('T','nonB',fmt(TT.nonB));
+    if ($('eSave')) $('eSave').disabled=!estHasData(w); }
+  el.querySelectorAll('input.e').forEach(function(inp){ inp.onchange=function(){ var w=estDraft(), r=w.rows[inp.getAttribute('data-r')]; if (!r) return;
+    var f=inp.getAttribute('data-f'), v=num(inp.value); if (f==='exp' && v!=null) v=Math.min(100,v);
+    if (v==null) delete r[f]; else r[f]=v; estSaveWork(w); refresh(); }; });
+  el.querySelectorAll('input.v').forEach(function(inp){ inp.onchange=function(){ var w=estDraft(), f=inp.getAttribute('data-vf'), v=num(inp.value);
+    if (f==='days') v=Math.max(1,Math.round(v||EST_DAYS[tab])); if (f==='can') v=Math.min(100,v||0);
+    if (v==null) delete w.vars[tab][f]; else w.vars[tab][f]=v; estSaveWork(w); }; });
+  el.querySelectorAll('[data-split]').forEach(function(b){ b.onclick=function(){ var w=estDraft(), id=b.getAttribute('data-split'), r=w.rows[id], blk=blockById(r.block)||{};
+    var tr=+blk.trees||0, ha=+blk.ha||0, a=Math.round(tr/2);
+    ['a','b'].forEach(function(s,i){ w.rows[id+s]=Object.assign({}, r, {name:r.name+s, trees:i?tr-a:a, ha:Math.round(ha/2*100)/100}); delete w.rows[id+s].final; });
+    delete w.rows[id]; estSaveWork(w); toast(r.name+' split in two. Check the trees and hectares of each part.'); route(); }; });
+  el.querySelectorAll('[data-join]').forEach(function(b){ b.onclick=function(){ var w=estDraft(), blk=b.getAttribute('data-join'), bb=blockById(blk)||{};
+    if (!confirm('Join the parts of '+(bb.name||'this block')+' again? The fruit counts of the parts are cleared.')) return;
+    for (var k in w.rows) if (w.rows[k].block===blk) delete w.rows[k];
+    w.rows[blk]={block:blk, name:bb.name, variety:bb.variety}; estSaveWork(w); route(); }; });
+  if ($('eFanus')) $('eFanus').onclick=function(){ var w=estDraft();
+    if (w.rows['8'] && blockById('8')){ var r8=w.rows['8']; delete w.rows['8']; ['8a','8b'].forEach(function(id){ w.rows[id]={block:'8', name:r8.name+id.slice(1), variety:r8.variety}; }); }
+    for (var id in EST_FANUS){ var f=EST_FANUS[id], r=w.rows[id]; if (!r) continue; r.br=f[0]; r.fr=f[1]; r.g=f[2]; r.exp=f[3]; if (f[4]){ r.trees=f[4]; r.ha=f[5]; } }
+    estSaveWork(w); Store.log(ME.name,'Harvest estimate: filled in from Fanus\'s 2027 spreadsheet'); toast('Spreadsheet figures filled in'); route(); };
+  if ($('eUnlock')) $('eUnlock').onclick=function(){ if (!confirm('Unlock the final reading? It is removed as the benchmark until you save a final reading again. The first and second readings stay.')) return;
+    var w=estDraft(); w.rows=JSON.parse(JSON.stringify(fin.rows)); w.vars=JSON.parse(JSON.stringify(fin.vars)); estSaveWork(w);
+    Store.del('estimates', fin.id); Store.log(ME.name,'Harvest estimate: final reading of '+niceShort(fin.date)+' unlocked'); route(); };
+  if ($('eSave')) $('eSave').onclick=estSaveModal;
+};
+function estSaveModal(){
+  var next=EST_READ.filter(function(x){ return !estGet(x[0]); })[0] || EST_READ[2], w=estDraft(), F=estSum(w,null);
+  modal('<h2>Save as a reading</h2><p class="small mute">Keeps a copy of the estimate as it stands now: '+fmt(F.bins)+' bins ('+fmt(F.expB)+' export).</p>'+
+    '<label class="f">Which reading</label><select id="erK">'+EST_READ.map(function(x){ return '<option value="'+x[0]+'"'+(x[0]===next[0]?' selected':'')+'>'+x[1]+(estGet(x[0])?' (replaces the one of '+niceShort(estGet(x[0]).date)+')':'')+'</option>'; }).join('')+'</select>'+
+    '<div class="fr"><div><label class="f">Date of the estimate</label><input type="date" id="erD" value="'+TODAY()+'" max="'+TODAY()+'"></div>'+
+    '<div><label class="f">Estimate done by</label><input type="text" id="erB" value="'+esc(ME.name)+'"></div></div>'+
+    '<div class="small mute" id="erN" style="margin-top:10px"></div>'+
+    '<div class="acts"><button class="btn" data-a="x">Cancel</button><button class="btn p" data-a="ok">Save reading</button></div>',
+    { x:closeModal, ok:function(){ var k=$('erK').value, lab=EST_READ.filter(function(x){return x[0]===k;})[0][1], date=$('erD').value||TODAY(), by=$('erB').value.trim()||ME.name;
+        if (estGet(k) && !confirm('Replace the '+lab.toLowerCase()+' saved on '+niceShort(estGet(k).date)+'?')) return;
+        if (k==='final' && !confirm('Save the final reading? It locks the estimate and becomes the line the season is tracked against.')) return;
+        var snap={id:S().season+'|'+k, season:S().season, kind:k, label:lab, date:date, by:by, savedBy:ME.name, at:Date.now(), kgE:kgE(), kgJ:kgJ(), bpb:S().bagsPerBin, rows:{}, vars:JSON.parse(JSON.stringify(w.vars))};
+        estRows(w).forEach(function(r){ var c=estRow(r,w), x=Object.assign({}, r); delete x.id; x.trees=c.trees; x.ha=c.ha; snap.rows[r.id]=x; });
+        Store.put('estimates', snap); Store.log(ME.name,'Harvest estimate: '+lab.toLowerCase()+' saved ('+fmt(estSum(snap,null).bins)+' bins, estimate by '+by+', '+niceShort(date)+')');
+        closeModal(); VIEW.eTab='sum'; toast(lab+' saved'); route(); } });
+  function note(){ $('erN').textContent = $('erK').value==='final' ? 'The final reading locks the estimate. An admin or office user can unlock it later.' : ''; }
+  $('erK').onchange=note; note();
+}
+// Season page: actual bins against the estimate, straight line over the planned picking days
+function estTrackCard(v){
+  var st=S(), b=estBench(); if (!b) return '<div class="card"><h3>Against the estimate</h3><div class="empty">No estimate reading saved yet. <a href="#estimate">Open Estimate</a> to do the first reading.</div></div>';
+  function actual(code){ var days={}, e=0, j=0; Store.all('bins').forEach(function(x){ if (x.variety!==code) return; var t=(+x.export||0)+(+x.juice||0); if (!t) return; days[x.date]=(days[x.date]||0)+t; e+=+x.export||0; j+=+x.juice||0; });
+    var ds=Object.keys(days).sort(), c=0, pts=[[0,0]]; ds.forEach(function(dt,i){ c+=days[dt]; pts.push([i+1,c]); }); return {n:ds.length, bins:e+j, exp:e, pts:pts}; }
+  var T=estSum(b,v), A=actual(v), N=+((b.vars||{})[v]||{}).days||EST_DAYS[v], plan=T.bins*Math.min(A.n,N)/N, diff=A.bins-plan;
+  var lab=b.label+', '+niceShort(b.date)+', by '+esc(b.by)+(b.kind==='final'?'':' (final reading not saved yet)');
+  var h='<div class="card"><h3>'+esc(vShort(v))+' against the estimate</h3><div class="small mute" style="margin-bottom:8px">Estimate: '+lab+'.</div>'+
+    '<div class="stats" style="grid-template-columns:repeat(auto-fit,minmax(150px,1fr))">'+
+      '<div class="stat est"><b class="num">'+fmt(A.bins)+' bins</b><span>'+(A.n?'picked · day '+A.n+' of '+N+' · '+pct(A.bins,T.bins)+'% of the estimate of '+fmt(T.bins):'not started · estimate '+fmt(T.bins)+' bins in '+N+' days')+'</span></div>'+
+      '<div class="stat"><b class="num">'+(A.n?fmt(Math.abs(diff))+' bins '+(diff>=0?'ahead':'behind'):'n/a')+'</b><span>'+(A.n?'against the plan line ('+fmt(plan)+' by day '+Math.min(A.n,N)+')':'against the plan line')+'</span></div>'+
+      '<div class="stat"><b class="num">'+(A.bins?pct(A.exp,A.bins)+'%':'n/a')+'</b><span>export so far · estimate said '+pct(T.expB,T.bins)+'%</span></div>'+
+      '<div class="stat"><b class="num">'+(A.n&&A.n<N?fmt(A.bins/A.n*N)+' bins':'n/a')+'</b><span>'+(A.n&&A.n<N?'by day '+N+' at this pace · '+(Math.round((A.bins/A.n*N-T.bins)/T.bins*100)===0?'in line with the estimate':upDown(A.bins/A.n*N,T.bins)+' on the estimate'):'at this pace')+'</span></div>'+
+    '</div>';
+  var maxD=Math.max(N,A.n), planPts=[[0,0],[N,T.bins]]; if (A.n>N) planPts.push([A.n,T.bins]);
+  var xt=[]; for (var dd=1; dd<=maxD; dd+= maxD>20?5:maxD>10?2:1) xt.push([dd,'Day '+dd]);
+  h+='<div class="chart" style="margin-top:10px">'+lineChart([{name:'Estimate',color:'#b7791f',pts:planPts,dash:true,w:2.5},{name:'Actual',color:'#2f6b45',pts:A.pts,w:3.5}],{xticks:xt})+
+    '<div class="legend"><span><i style="background:#2f6b45"></i>Actual bins · '+fmt(A.bins)+'</span><span><i style="background:#b7791f"></i>Estimate, straight line · '+fmt(T.bins)+'</span></div></div>';
+  h+='<div class="tw" style="margin-top:10px"><table><thead><tr><th>Variety</th><th>Status</th><th class="r">Estimate</th><th class="r">Actual</th><th class="r">% picked</th><th class="r">Against plan</th><th class="r">Export % plan</th><th class="r">Export % actual</th></tr></thead><tbody>'+
+    EST_VARS.map(function(c){ var t=estSum(b,c), a=actual(c), n=+((b.vars||{})[c]||{}).days||EST_DAYS[c], p=t.bins*Math.min(a.n,n)/n, df=a.bins-p;
+      return '<tr><td><b>'+esc(vShort(c))+'</b></td><td>'+(a.n?'<span class="tag b">Day '+a.n+' of '+n+'</span>':'<span class="tag">Not started</span>')+'</td><td class="r num">'+fmt(t.bins)+'</td><td class="r num"><b>'+fmt(a.bins)+'</b></td><td class="r num">'+(t.bins?pct(a.bins,t.bins)+'%':'')+'</td><td class="r nowrap">'+(a.n?fmt(Math.abs(df))+' '+(df>=0?'ahead':'behind'):'')+'</td><td class="r num">'+(t.bins?pct(t.expB,t.bins)+'%':'')+'</td><td class="r num">'+(a.bins?pct(a.exp,a.bins)+'%':'')+'</td></tr>'; }).join('')+'</tbody></table></div></div>';
+  return h;
+}
 
 /* ---------------- ORCHARDS ---------------- */
 VIEWS.orchards=function(el){
@@ -1182,6 +1372,8 @@ VIEWS.settings=function(el){
   h+='<div class="grid g2"><div class="card"><h3>Pay and bins</h3><div class="fr">'+
     '<div><label class="f">Rate per bag (R)</label><input type="number" step="0.05" min="0" id="sRate" value="'+st.ratePerBag+'"></div>'+
     '<div><label class="f">Bags per bin</label><input type="number" min="20" max="80" id="sBpb" value="'+st.bagsPerBin+'"></div>'+
+    '<div><label class="f">Kg of fruit in an export bin</label><input type="number" min="200" max="700" id="sKgE" value="'+kgE()+'"></div>'+
+    '<div><label class="f">Kg of fruit in a juice bin</label><input type="number" min="200" max="700" id="sKgJ" value="'+kgJ()+'"></div>'+
     '<div><label class="f">Ignore a repeat tap within (minutes)</label><input type="number" min="0" max="15" id="sRep" value="'+st.repeatMin+'"></div></div>'+
     '<div class="acts"><button class="btn p" id="sSave1">Save</button></div></div>';
   h+='<div class="card"><h3>Picking day</h3><div class="small mute">Used for the bins estimate. Breaks are the gaps between sessions.</div>'+
@@ -1207,7 +1399,8 @@ VIEWS.settings=function(el){
   el.querySelectorAll('tr[data-w]').forEach(function(r){ r.onclick=function(){ workerModal(r.getAttribute('data-w')); }; });
   $('sSave1').onclick=function(){ var s=JSON.parse(JSON.stringify(st)), o=[st.ratePerBag,st.bagsPerBin,st.repeatMin];
     s.ratePerBag=Math.max(0,parseFloat($('sRate').value)||0); s.bagsPerBin=Math.max(1,parseInt($('sBpb').value,10)||45); s.repeatMin=Math.max(0,parseFloat($('sRep').value)||0);
-    Store.setSettings(s,ME.name,'Settings: rate '+R(o[0])+' → '+R(s.ratePerBag)+', bags/bin '+o[1]+' → '+s.bagsPerBin+', repeat '+o[2]+' → '+s.repeatMin+' min'); toast('Saved'); };
+    s.kgExport=Math.max(1,parseFloat($('sKgE').value)||470); s.kgJuice=Math.max(1,parseFloat($('sKgJ').value)||445);
+    Store.setSettings(s,ME.name,'Settings: rate '+R(o[0])+' → '+R(s.ratePerBag)+', bags/bin '+o[1]+' → '+s.bagsPerBin+', repeat '+o[2]+' → '+s.repeatMin+' min, bin kg '+s.kgExport+' export / '+s.kgJuice+' juice'); toast('Saved'); };
   $('sSave2').onclick=function(){ var s=JSON.parse(JSON.stringify(st));
     el.querySelectorAll('[data-ss]').forEach(function(i){ var p=i.getAttribute('data-ss').split('|'); if (i.value) s.sessions[+p[0]][+p[1]]=i.value; });
     el.querySelectorAll('[data-tn]').forEach(function(i){ s.teams[+i.getAttribute('data-tn')].name=i.value.trim()||s.teams[+i.getAttribute('data-tn')].name; });

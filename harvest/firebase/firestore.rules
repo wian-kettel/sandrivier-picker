@@ -70,6 +70,8 @@ service cloud.firestore {
 
     // each FORT 1 reports its battery every few minutes, under its own login id
     match /devices/{id}    { allow read: if office(); allow write: if office() || (scanner() && request.auth.uid == id); }
+    // harvest estimate: the working estimate and the saved readings
+    match /estimates/{id}  { allow read, write: if office(); }
     match /bins/{id}       { allow read, write: if office(); }
     match /attendance/{id} { allow read, write: if office(); }
     match /paidWeeks/{id}  { allow read, write: if office(); }
